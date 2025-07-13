@@ -43,16 +43,5 @@ namespace API.Controllers
 
             return BadRequest(ApiResponse<T>.Error(result.Error));
         }
-
-        protected IActionResult HandleCommandResult(Result<Unit> result)
-        {
-            if (result == null)
-                return NotFound(ApiResponse<string>.Error("Resource not found."));
-
-            if (result.IsSuccess)
-                return Ok(ApiResponse<string>.Success("Operation successful."));
-
-            return BadRequest(ApiResponse<string>.Error(result.Error));
-        }
     }
 }

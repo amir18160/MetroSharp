@@ -16,7 +16,7 @@ namespace API.Controllers
         }
       
         [HttpPut]
-        public async Task<IActionResult> DeleteUser([FromBody] Application.Users.Update.Command command)
+        public async Task<IActionResult> DeleteUser([FromBody] Update.Command command)
         {
             return BadRequest();
         }

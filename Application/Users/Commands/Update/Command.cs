@@ -7,7 +7,6 @@ namespace Application.Users.Update
     {
         public string Name { get; set; }
         public string Bio { get; set; }
-        public string TelegramProfileImage { get; set; }
         public string Image { get; set; }
     }
 }
