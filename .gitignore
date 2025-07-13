@@ -1,0 +1,68 @@
+## Build results
+bin/
+obj/
+*.exe
+*.dll
+*.app
+*.cache/
+*.log
+
+## User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Rider files
+.idea/
+*.sln.iml
+
+## Visual Studio Code
+.vscode/
+
+## ASP.NET Core & general
+.env
+.env.*
+appsettings.*.json
+secrets.json
+*.db
+*.db-shm
+*.db-wal
+
+## EF Core Migrations build artifacts
+Migrations/
+
+## Playwright
+playwright-report/
+playwright/.cache/
+
+## Logs
+*.log
+logs/
+*.log.*
+
+## npm / frontend extras (if used)
+node_modules/
+dist/
+
+## Auto-generated files
+*.generated.cs
+*.g.cs
+*.AssemblyInfo.cs
+
+## Test Results
+TestResults/
+coverage/
+
+## Dotnet artifacts
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## Global tools
+.nupkg/
+*.nupkg
+*.snupkg
+
+## Mac system files
+.DS_Store
