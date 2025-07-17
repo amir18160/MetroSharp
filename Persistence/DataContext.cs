@@ -14,39 +14,42 @@ namespace Persistence
         public DbSet<Episode> Episodes { get; set; }
         public DbSet<Season> Seasons { get; set; }
 
-        /******* Progress Related *********/
-
-        // add progress and download lated
 
         /******* User Related *******/
-        // no need
-        // public new DbSet<User> Users { get; set; }
+        public DbSet<EmailVerification> EmailVerifications { get; set; }
         public DbSet<BannedUser> BannedUsers { get; set; }
         public DbSet<Plan> Plans { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
 
-
         protected override void OnModelCreating(ModelBuilder builder)
         {
-            base.OnModelCreating(builder); // 👈 required for IdentityDbContext!
+            base.OnModelCreating(builder);
 
+            // Subscription <-> User (one-to-many)
             builder.Entity<Subscription>()
                 .HasOne(s => s.User)
                 .WithMany(u => u.Subscriptions)
                 .HasForeignKey(s => s.UserId)
                 .IsRequired();
 
+            // Subscription <-> Plan (one-to-many)
             builder.Entity<Subscription>()
                 .HasOne(s => s.Plan)
                 .WithMany(p => p.Subscriptions)
                 .HasForeignKey(s => s.PlanId)
                 .IsRequired();
 
+            // BannedUser <-> User (one-to-one)
             builder.Entity<BannedUser>()
                 .HasOne(b => b.User)
                 .WithOne(u => u.BannedUser)
                 .HasForeignKey<BannedUser>(b => b.UserId);
-        }
 
+            // EmailVerification <-> User (one-to-many)
+            builder.Entity<EmailVerification>()
+                .HasOne(ev => ev.User)
+                .WithMany(u => u.EmailVerifications)
+                .HasForeignKey(ev => ev.UserId);
+        }
     }
 }

@@ -12,6 +12,6 @@ namespace Domain.Entities
         public int NumOfDownloads { get; set; }
         public int NumOfRequest { get; set; }
 
-        public ICollection<Subscription> Subscriptions { get; set; }
+        public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
     }
 }

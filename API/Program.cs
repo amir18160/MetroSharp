@@ -1,6 +1,10 @@
 using API.Extensions;
 using API.Middleware;
+using Domain.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Persistence;
+using Persistence.Seeds;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,22 +25,27 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-using var scope = app.Services.CreateScope();
-var services = scope.ServiceProvider;
+var scope = app.Services.CreateScope();
+IServiceProvider services = scope.ServiceProvider;
 
 try
 {
     var context = services.GetRequiredService<DataContext>();
+    var userManager = services.GetRequiredService<UserManager<User>>();
     // await context.Database.MigrateAsync();
+    // await SeedRoles.SeedUserRoles(services);
+    // await DataSeeder.SeedAsync(context, userManager);
 }
 catch (Exception ex)
 {
     var logger = services.GetRequiredService<ILogger<Program>>();
     logger.LogError(ex, "An error occured during migration.");
 }
+
 
 app.Run();

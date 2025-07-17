@@ -1,4 +1,3 @@
-using Domain.Enums;
 using Microsoft.AspNetCore.Identity;
 
 namespace Domain.Entities
@@ -6,7 +5,6 @@ namespace Domain.Entities
     public class User : IdentityUser
     {
         public string Name { get; set; }
-        public UserRole Role { get; set; }
         public bool IsConfirmed { get; set; }
         public string Bio { get; set; }
         public string TelegramProfileImage { get; set; }
@@ -16,7 +14,9 @@ namespace Domain.Entities
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
 
-        public ICollection<Subscription> Subscriptions { get; set; }
+        public ICollection<Subscription> Subscriptions { get; set; } =  new List<Subscription>();
+        public ICollection<EmailVerification> EmailVerifications { get; set; } =  new List<EmailVerification>();
+
         public BannedUser BannedUser { get; set; }
     }
 }

@@ -28,20 +28,29 @@ namespace API.Controllers
             return BadRequest(ApiResponse<T>.Error(result.Error));
         }
 
-        protected IActionResult HandlePagedResult<T>(Result<T> result)
+        protected IActionResult HandlePagedResult<T>(Result<PagedList<T>> result)
         {
             if (result == null)
-                return NotFound(ApiResponse<T>.Error("Resource not found."));
+                return NotFound(ApiResponse<object>.Error("Resource not found."));
 
             if (result.IsSuccess)
             {
                 if (result.Value == null)
-                    return NotFound(ApiResponse<T>.Error("No content."));
+                    return NotFound(ApiResponse<object>.Error("No content."));
 
-                return Ok(ApiResponse<T>.Success(result.Value));
+                var pagedData = new
+                {
+                    items = result.Value.ToList(),
+                    currentPage = result.Value.CurrentPage,
+                    pageSize = result.Value.PageSize,
+                    totalPages = result.Value.TotalPages,
+                    totalCount = result.Value.TotalCount
+                };
+
+                return Ok(ApiResponse<object>.Success(pagedData));
             }
 
-            return BadRequest(ApiResponse<T>.Error(result.Error));
+            return BadRequest(ApiResponse<object>.Error(result.Error));
         }
     }
 }

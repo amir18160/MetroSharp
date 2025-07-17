@@ -16,7 +16,7 @@ namespace Persistence
                 .Build();
 
             var optionsBuilder = new DbContextOptionsBuilder<DataContext>();
-            var connectionString = config.GetConnectionString("DefaultConnection");
+            var connectionString = config.GetConnectionString("DataContext");
 
             optionsBuilder.UseSqlite(connectionString); 
 
