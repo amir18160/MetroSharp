@@ -8,6 +8,9 @@ using Infrastructure.GeminiWrapper;
 using Infrastructure.GeminiWrapper.Models;
 using Infrastructure.OmdbWrapper;
 using Infrastructure.OmdbWrapper.Models;
+using Infrastructure.QbitTorrentClient;
+using Infrastructure.QbitTorrentClient.Models;
+using Infrastructure.Scrapers;
 using Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
@@ -31,19 +34,24 @@ namespace API.Extensions
             });
 
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Application.Users.Commands.Update.Handler).Assembly));
-            services.AddAutoMapper(typeof(MappingProfiles).Assembly);
+            services.AddAutoMapper(typeof(MappingProfiles).Assembly, typeof(Infrastructure.Core.MappingProfiles).Assembly);
             services.AddHttpContextAccessor();
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Application.Users.Commands.Update.Validator>();
            
             services.AddScoped<IUserAccessor, UserAccessor>();
             services.AddScoped<IGeminiService, GeminiService>();
-            services.AddScoped<IOmdbService, OMDbService>();
+            services.AddScoped<IScraperFacade, ScraperFacade>();
+
+            services.AddHttpClient<IOmdbService, OMDbService>();
 
             services.Configure<SmtpSettings>(config.GetSection("SmtpSettings"));
             services.Configure<EmailSettings>(config.GetSection("EmailSettings"));
             services.Configure<OMDbSettings>(config.GetSection("OMDbSettings"));
             services.Configure<GeminiSettings>(config.GetSection("GeminiSettings"));
+            services.Configure<QbitTorrentSettings>(config.GetSection("QbitTorrentSettings"));
+
+            services.AddSingleton<IQbitClient, QbitClient>();
 
             services.AddTransient<IEmailService, EmailService>();
             return services;

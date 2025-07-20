@@ -1,5 +1,10 @@
+using Application.Scrapers.Queries.GetLatestTorrents;
 using AutoMapper;
 using Domain.Entities;
+using Domain.Enums;
+using Domain.Models.Scrapers.Rarbg;
+using Domain.Models.Scrapers.X1337;
+using Domain.Models.Scrapers.Yts;
 
 namespace Application.Core
 {
@@ -22,10 +27,10 @@ namespace Application.Core
 
 
             CreateMap<User, Users.Queries.GetSingleUser.UserDetailsDto>()
-             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.ToString("O"))) // convert DateTime to ISO string
-             .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt.ToString("O")))
-             .ForMember(dest => dest.IsBanned, opt => opt.Ignore())
-             .ForMember(dest => dest.HasActiveSubscription, opt => opt.Ignore());
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.ToString("O")))
+                .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt.ToString("O")))
+                .ForMember(dest => dest.IsBanned, opt => opt.Ignore())
+                .ForMember(dest => dest.HasActiveSubscription, opt => opt.Ignore());
 
 
             CreateMap<Users.Commands.UpdateUsersByAdmin.Command, User>()
@@ -40,6 +45,39 @@ namespace Application.Core
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.User.Name))
                 .ForMember(dest => dest.FreeAt, opt => opt.MapFrom(src => src.FreeAt.HasValue ? src.FreeAt.ToString() : null));
+
+            CreateMap<RarbgPreview, AbstractedLatestTorrent>()
+                .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
+                .ForMember(dest => dest.DetailUrl, opt => opt.MapFrom(src => src.TitleHref))
+                .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category))
+                .ForMember(dest => dest.CategoryUrl, opt => opt.MapFrom(src => src.CategoryHref))
+                .ForMember(dest => dest.Size, opt => opt.MapFrom(src => src.Size))
+                .ForMember(dest => dest.Seeders, opt => opt.MapFrom(src => src.Seeders))
+                .ForMember(dest => dest.Leechers, opt => opt.MapFrom(src => src.Leechers))
+                .ForMember(dest => dest.MagnetLink, opt => opt.MapFrom(src => src.MagnetLink))
+                .ForMember(dest => dest.Type, opt => opt.MapFrom(_ => TorrentSource.RARBG));
+
+            CreateMap<X1337Preview, AbstractedLatestTorrent>()
+                .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Name))
+                .ForMember(dest => dest.DetailUrl, opt => opt.MapFrom(src => src.RefLink))
+                .ForMember(dest => dest.Size, opt => opt.MapFrom(src => src.FileSize))
+                .ForMember(dest => dest.Seeders, opt => opt.MapFrom(src => TryParseInt(src.Seeds)))
+                .ForMember(dest => dest.Leechers, opt => opt.MapFrom(src => TryParseInt(src.Leeches)))
+                .ForMember(dest => dest.Type, opt => opt.MapFrom(_ => TorrentSource.X1337));
+
+            CreateMap<YtsPreview, AbstractedLatestTorrent>()
+                .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
+                .ForMember(dest => dest.Year, opt => opt.MapFrom(src => src.Year))
+                .ForMember(dest => dest.DetailUrl, opt => opt.MapFrom(src => src.DetailUrl))
+                .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.ImageUrl))
+                .ForMember(dest => dest.Rating, opt => opt.MapFrom(src => src.Rating))
+                .ForMember(dest => dest.Genres, opt => opt.MapFrom(src => src.Genres))
+                .ForMember(dest => dest.Type, opt => opt.MapFrom(_ => TorrentSource.YTS));
+        }
+
+        private static int TryParseInt(string value)
+        {
+            return int.TryParse(value, out int result) ? result : 0;
         }
     }
 }

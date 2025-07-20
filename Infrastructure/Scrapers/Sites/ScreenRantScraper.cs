@@ -1,5 +1,5 @@
+using Domain.Models.Scrapers.ScreenRent;
 using Infrastructure.Scrapers.Core;
-using Infrastructure.Scrapers.Models.ScreenRent;
 using System.Text.RegularExpressions;
 
 namespace Infrastructure.Scrapers.Sites

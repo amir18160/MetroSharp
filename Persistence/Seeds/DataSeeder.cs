@@ -80,7 +80,7 @@ namespace Persistence.Seeds
             // OmdbItems
             var omdbItems = new Faker<OmdbItem>()
                 .RuleFor(o => o.Id, _ => Guid.NewGuid())
-                .RuleFor(o => o.ImdbItem, f => f.Random.Guid().ToString())
+                .RuleFor(o => o.ImdbId, f => f.Random.Guid().ToString())
                 .RuleFor(o => o.Title, f => f.Lorem.Sentence(3))
                 .RuleFor(o => o.Rated, _ => "PG-13")
                 .RuleFor(o => o.Released, f => f.Date.Past().ToShortDateString())
@@ -102,7 +102,7 @@ namespace Persistence.Seeds
                 .RuleFor(o => o.Directors, f => f.Make(2, () => f.Name.FullName()))
                 .RuleFor(o => o.Writers, f => f.Make(2, () => f.Name.FullName()))
                 .RuleFor(o => o.Year, f => f.Date.Past().Year)
-                .RuleFor(o => o.Ratings, f => new[] { $"{f.Random.Int(1, 10)}/10" })
+                .RuleFor(o => o.RottenTomatoesScore, f => f.Random.Int(1, 100))
                 .Generate(10);
 
             await context.OmdbItems.AddRangeAsync(omdbItems);

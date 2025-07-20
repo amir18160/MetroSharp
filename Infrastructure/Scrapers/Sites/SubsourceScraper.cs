@@ -1,6 +1,6 @@
 using AngleSharp.Dom;
+using Domain.Models.Scrapers.Subsource;
 using Infrastructure.Scrapers.Core;
-using Infrastructure.Scrapers.Models.Subsource;
 using Microsoft.Playwright;
 
 namespace Infrastructure.Scrapers.Sites

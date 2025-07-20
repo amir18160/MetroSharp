@@ -1,6 +1,6 @@
 using AngleSharp.Dom;
+using Domain.Models.Scrapers.Sub2fm;
 using Infrastructure.Scrapers.Core;
-using Infrastructure.Scrapers.Models.Sub2fm;
 
 namespace Infrastructure.Scrapers.Sites
 {

@@ -8,11 +8,17 @@ using Persistence.Seeds;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
+// builder.Logging.ClearProviders(); 
+// builder.Logging.AddConsole();    
+// builder.Logging.SetMinimumLevel(LogLevel.Information); // Minimum level to log
+
 // Add services to the container.
 
 builder.Services.AddControllers();
 builder.Services.AddApplicationServices(builder.Configuration);
 builder.Services.AddIdentityServices(builder.Configuration);
+
 
 var app = builder.Build();
 

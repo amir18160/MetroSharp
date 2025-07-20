@@ -1,6 +1,6 @@
 using AngleSharp.Dom;
+using Domain.Models.Scrapers.Yts;
 using Infrastructure.Scrapers.Core;
-using Infrastructure.Scrapers.Models.Yts;
 
 namespace Infrastructure.Scrapers.Sites
 {

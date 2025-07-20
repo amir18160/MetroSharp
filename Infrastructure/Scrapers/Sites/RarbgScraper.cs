@@ -1,22 +1,22 @@
 using AngleSharp.Dom;
+using Domain.Models.Scrapers.Rarbg;
 using Infrastructure.Scrapers.Core;
-using Infrastructure.Scrapers.Models.Rarbg;
 using System.Text.RegularExpressions;
 
 namespace Infrastructure.Scrapers.Sites
 {
     public class RarbgScraper : ScraperBase
     {
-        private readonly string _baseUrl = "https://therarbg.to";
+        private static readonly string _baseUrl = "https://therarbg.com";
 
-        public async Task<List<RarbgPreview>> SearchMoviesAsync(string imdbId)
+        public static async Task<List<RarbgPreview>> SearchMoviesAsync(string imdbId)
         {
             var url = $"{_baseUrl}/get-posts/keywords:{imdbId}/";
             var document = await AngleSharpGetDocumentAsync(url);
             return ParseMovieTable(document);
         }
 
-        public async Task<List<RarbgPreview>> GetLatestMoviesAsync(int page = 1)
+        public static async Task<List<RarbgPreview>> GetLatestMoviesAsync(int page = 1)
         {
             var url = page > 1
                 ? $"{_baseUrl}/get-posts/category:Movies:time:10D/?page={page}"
@@ -26,7 +26,7 @@ namespace Infrastructure.Scrapers.Sites
             return ParseMovieTable(document);
         }
 
-        public async Task<RarbgDetails> GetTitleDetailsByHrefAsync(string href)
+        public static async Task<RarbgDetails> GetTitleDetailsByHrefAsync(string href)
         {
             var document = await AngleSharpGetDocumentAsync(href);
             var result = new RarbgDetails();
@@ -72,16 +72,13 @@ namespace Infrastructure.Scrapers.Sites
                 Cast = GetText("IMDB cast"),
                 Plot = GetText("IMDB plot")
             };
-
-
-
             return result;
         }
 
-        public async Task<string> GetMostSuitedMagnetAsync(string imdbId)
+        public static async Task<string> GetMostSuitedMagnetAsync(string imdbId)
         {
             var results = await SearchMoviesAsync(imdbId);
-            if (!results.Any()) return null;
+            if (results.Count == 0) return null;
 
             var filtered = results
                 .Select(m =>
@@ -100,7 +97,7 @@ namespace Infrastructure.Scrapers.Sites
             return filtered.FirstOrDefault()?.MagnetLink;
         }
 
-        public async Task<List<RarbgPreview>> GetTorrentsByImdbIdAsync(string imdbId)
+        public static  async Task<List<RarbgPreview>> GetTorrentsByImdbIdAsync(string imdbId)
         {
             try
             {
@@ -112,7 +109,7 @@ namespace Infrastructure.Scrapers.Sites
             }
         }
 
-        private List<RarbgPreview> ParseMovieTable(IDocument document)
+        private  static List<RarbgPreview> ParseMovieTable(IDocument document)
         {
             return document.QuerySelectorAll("tbody > tr").Select(row =>
             {

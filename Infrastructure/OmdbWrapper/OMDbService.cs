@@ -26,11 +26,11 @@ namespace Infrastructure.OmdbWrapper
         public OMDbService(IOptions<OMDbSettings> settings, ILogger<OMDbService> logger, DownloadContext downloadContext, HttpClient httpClient, IGeminiService geminiService)
         {
             _apiKeys = settings.Value.ApiKeys;
+            _apiUrl = settings.Value.ApiUrl;
             _logger = logger;
             _downloadContext = downloadContext;
             _httpClient = httpClient;
             _geminiService = geminiService;
-            
         }
 
         public async Task<OmdbItem> GetTitleByImdbIdAsync(string imdbId)
