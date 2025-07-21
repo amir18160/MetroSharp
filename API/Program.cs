@@ -1,6 +1,7 @@
 using API.Extensions;
 using API.Middleware;
 using Domain.Entities;
+using Hangfire;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
@@ -9,9 +10,7 @@ using Persistence.Seeds;
 var builder = WebApplication.CreateBuilder(args);
 
 
-// builder.Logging.ClearProviders(); 
-// builder.Logging.AddConsole();    
-// builder.Logging.SetMinimumLevel(LogLevel.Information); // Minimum level to log
+
 
 // Add services to the container.
 
@@ -30,6 +29,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseHangfireDashboard();
 
 app.UseAuthentication();
 app.UseAuthorization();

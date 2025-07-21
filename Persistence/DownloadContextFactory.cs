@@ -15,7 +15,7 @@ namespace Persistence
                 .AddJsonFile("appsettings.json")
                 .Build();
 
-            var optionsBuilder = new DbContextOptionsBuilder<DataContext>();
+            var optionsBuilder = new DbContextOptionsBuilder<DownloadContext>();
             var connectionString = config.GetConnectionString("DownloadContext");
 
             optionsBuilder.UseSqlite(connectionString); 

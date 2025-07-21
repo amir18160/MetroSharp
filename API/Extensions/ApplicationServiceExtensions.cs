@@ -2,6 +2,9 @@ using Application.Core;
 using Application.Interfaces;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Hangfire;
+using Hangfire.SQLite;
+using Infrastructure.BackgroundServices.TorrentProcessTask;
 using Infrastructure.EmailService;
 using Infrastructure.EmailService.Models;
 using Infrastructure.GeminiWrapper;
@@ -33,12 +36,30 @@ namespace API.Extensions
                 opt.UseSqlite(config.GetConnectionString("DownloadContext"));
             });
 
+
+
+            services.AddHangfire(configuration => configuration
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseSQLiteStorage(config.GetConnectionString("DownloadContext")));
+
+            
+            
+            services.AddHangfireServer(options =>
+            {
+                options.WorkerCount = 5;
+            });
+
+            services.AddScoped<TorrentTaskProcessor>();
+            services.AddHostedService<TaskPollingService>();
+
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Application.Users.Commands.Update.Handler).Assembly));
             services.AddAutoMapper(typeof(MappingProfiles).Assembly, typeof(Infrastructure.Core.MappingProfiles).Assembly);
             services.AddHttpContextAccessor();
             services.AddFluentValidationAutoValidation();
             services.AddValidatorsFromAssemblyContaining<Application.Users.Commands.Update.Validator>();
-           
+
             services.AddScoped<IUserAccessor, UserAccessor>();
             services.AddScoped<IGeminiService, GeminiService>();
             services.AddScoped<IScraperFacade, ScraperFacade>();
