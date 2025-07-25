@@ -33,7 +33,7 @@ namespace Application.Users.Commands.ResetPassword
             }
 
             var verification = _context.EmailVerifications
-                .FirstOrDefault(x => x.UserId == user.Id && x.Purpose == EmailPurpose.PasswordReset && x.Expiration > DateTime.Now && !x.Used);
+                .FirstOrDefault(x => x.UserId == user.Id && x.Purpose == EmailPurpose.PasswordReset && x.Expiration > DateTime.UtcNow && !x.Used);
 
             if (verification == null)
             {

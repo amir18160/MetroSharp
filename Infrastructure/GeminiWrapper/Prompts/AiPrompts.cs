@@ -1,5 +1,7 @@
 // cspell: disable
 
+using System.Linq;
+
 namespace Infrastructure.GeminiWrapper.Prompts
 {
     public static class AiPrompts
@@ -67,7 +69,82 @@ namespace Infrastructure.GeminiWrapper.Prompts
             """;
         }
 
+        public static string GeneratePairJson(List<string> moviePaths, List<string> subtitlePaths)
+        {
+            string videoList = string.Join(", ", moviePaths.Select(s => s));
+            string subtitleList = string.Join(", ", subtitlePaths.Select(s => s));
 
+            return $$"""
+            i will provide you with two list of strings. both lists include one or more paths of files on my disk.
+            one list is paths of videos and the other is a list of path to subtitles.
+            i want you to match videos to related subtitles and return an array of jsons.
+            you need to consider these:
+            1. each video can only match one subtitle by their name.
+            2. some videos might match multiple subtitles, but you only pick one and generate only one json for it in that array.
+            3. some videos might have no matching subtitles so in json you put null for subtitle value.
+            4. sometimes you have to look at the patern of names to match subtitles with videos. for example we have this data: Videos = [path/seven.samurai.720p.x264.duubed.bluray.AC3.mkv] subtitles = [path/seven.samurai.srt, seven.samurai.720p.rarbg.srt]. both subtitle examples are both a match to our subtitle. so you pick closest match whch is the second example in this case: seven.samurai.720p.rarbg.srt.
+            some other times pattern is not similar since both subtitles and videos are closely related you should pick with closes one.
+            this is another example you must consider:
+            Videos    = [path/the.boys.s01.E01.bluray.720p, path/the.boys.s01.E03.bluray.720p, path/the.boys.s01.E02.bluray.720p]  
+            Subtitles = [path/the.boys.s01.E01.bluray.srt, path/the.boys.s01.E2.bluray.srt, path/s1.E3.bluray.720p]
+            based on above exmaple each video is a match to exaclt one subtitle.
+            and even we might have this example:
+            Videos    = [the.boys.s01.E01.bluray.720p, the.boys.s01.E03.bluray.720p, the.boys.s01.E02.bluray.720p]  
+            Subtitles = [s01 E01.srt, s01.E2.srt, s1 E3.720p]
+            and in this we can find a match for each videos in subtitle list. what matter's here is that we already know subtitles are related to the videos.
+            this is another example:
+            Videos    = [the.boys.s02.E01.bluray.720p, the.boys.s02.E03.bluray.720p, the.boys.s02.E02.bluray.720p]  
+            Subtitles = [s01 E01.srt, s01.E2.srt, s1 E3.720p]
+            in this example we how no match for any of our videos becuase the season is diffrent in our subtitles which means we have completely wring subtitles.
+            this is another example:
+            Videos    = [the.boys.s02.E01.bluray.720p, the.boys.s02.E03.bluray.720p, the.boys.s02.E02.bluray.720p]  
+            Subtitles = [s01 E01.srt, s01.E2.srt]
+            in this example one of our videos has no matching subtitle. 
+            5. the result must be in this format and you must absolutely not return any otherthing or charchter at all.
+            you must purly return a response based in the provides data:
+            data example: 
+            Videos    = [path/the.boys.s01.E01.bluray.720p.mp4, path/the boys s01 E03 720p.mkv, path/the.boys.s01.E02.bluray.720p.avi]  
+            Subtitles = [path/s01 E01.srt, path/the boys s01 E2.srt]
+            response example:
+            [
+                {
+                    "VideoPath": "path/the.boys.s01.E01.bluray.720p.mp4",
+                    "SubtitlePath": "path/s01 E01.srt"
+                },
+                {
+                    "VideoPath": "path/the.boys.s01.E02.bluray.720p.avi",
+                    "SubtitlePath": "path/the boys s01 E2.srt"
+                },
+                {
+                    "VideoPath": "path/the boys s01 E03 720p.mkv",
+                    "SubtitlePath": null
+                }
+            ]
+
+            Another Example:
+            Videos    = [path/the.boys.s01.E01.bluray.720p.mp4, path/the boys s01 E03 720p.mkv, path/the.boys.s01.E02.bluray.720p.avi]  
+            Subtitles = [] no subtitle is provided here
+            response example:
+            [
+                {
+                    "VideoPath": "path/the.boys.s01.E01.bluray.720p.mp4",
+                    "SubtitlePath": null
+                },
+                {
+                    "VideoPath": "path/the.boys.s01.E02.bluray.720p.avi",
+                    "SubtitlePath": null
+                },
+                {
+                    "VideoPath": "path/the boys s01 E03 720p.mkv",
+                    "SubtitlePath": null
+                }
+            ]
+
+            This is the actual list that you have to response to it:
+            VideoPaths = [{{videoList}}]
+            VideoPaths = [{{subtitlePaths}}]
+            """;
+        }
 
     }
 }

@@ -31,7 +31,7 @@ namespace Application.Users.Commands.RequestResetPassword
 
             var alreadyInProcess = user.EmailVerifications.Any(x =>
                 x.Purpose == Domain.Enums.EmailPurpose.PasswordReset &&
-                x.Expiration > DateTime.Now &&
+                x.Expiration > DateTime.UtcNow &&
                 !x.Used);
 
             if (alreadyInProcess)
@@ -43,7 +43,7 @@ namespace Application.Users.Commands.RequestResetPassword
 
             _context.EmailVerifications.Add(new EmailVerification
             {
-                Expiration = DateTime.Now.AddMinutes(20),
+                Expiration = DateTime.UtcNow.AddMinutes(20),
                 User = user,
                 Code = generatedCode,
                 Purpose = Domain.Enums.EmailPurpose.PasswordReset,

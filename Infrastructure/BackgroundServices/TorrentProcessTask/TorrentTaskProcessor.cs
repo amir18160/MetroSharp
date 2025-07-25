@@ -1,39 +1,103 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Persistence;
-
 namespace Infrastructure.BackgroundServices.TorrentProcessTask
 {
-
     public class TorrentTaskProcessor
     {
-        private readonly DownloadContext _downloadContext;
-        private readonly ILogger<TorrentTaskProcessor> _logger;
+        private readonly TorrentTaskStartConditionChecker _conditionChecker;
+        private readonly CheckAndGenerateOMDbData _checkAndGenerateOMDbData;
+        private readonly StartTorrentTaskDownload _startTorrentTaskDownload;
+        private readonly DownloadSubtitleForTorrent _downloadSubtitleForTorrent;
+        private readonly PairSubtitleWithVideos _pairSubtitleWithVideos;
+        private readonly FFmpegTaskProcessor _ffmpegTaskProcessor;
+        private readonly SubtitleEditor _subtitleEditor;
 
-        public TorrentTaskProcessor(DownloadContext context, ILogger<TorrentTaskProcessor> logger)
+
+        public TorrentTaskProcessor
+        (
+            SubtitleEditor subtitleEditor,
+            FFmpegTaskProcessor ffmpegTaskProcessor,
+            PairSubtitleWithVideos pairSubtitleWithVideos,
+            DownloadSubtitleForTorrent downloadSubtitleForTorrent,
+            StartTorrentTaskDownload startTorrentTaskDownload,
+            CheckAndGenerateOMDbData checkAndGenerateOMDbData,
+            TorrentTaskStartConditionChecker conditionChecker
+        )
         {
-            _downloadContext = context;
-            _logger = logger;
+            _subtitleEditor = subtitleEditor;
+            _ffmpegTaskProcessor = ffmpegTaskProcessor;
+            _pairSubtitleWithVideos = pairSubtitleWithVideos;
+            _downloadSubtitleForTorrent = downloadSubtitleForTorrent;
+            _startTorrentTaskDownload = startTorrentTaskDownload;
+            _checkAndGenerateOMDbData = checkAndGenerateOMDbData;
+            _conditionChecker = conditionChecker;
         }
-
-        public async Task Process(int taskId)
+        public async Task ProcessTorrentTaskAsync(Guid torrentTaskId)
         {
-            var task = await _downloadContext.TorrentTasks.FindAsync(taskId);
+            /***************************************/
+            /**** Get Task And Check Conditions ****/
+            /***************************************/
 
-            if (task == null)
+            if (!await _conditionChecker.CheckAsync(torrentTaskId))
             {
-                _logger.LogWarning("Task {TaskId} not valid or not ready.", taskId);
                 return;
             }
 
-            _logger.LogInformation("Processing Task {TaskId}", task.Id);
+            /***************************************/
+            /********** Get Omdb Data  *************/
+            /***************************************/
+
+            if (!await _checkAndGenerateOMDbData.Checker(torrentTaskId))
+            {
+                return;
+            }
+
+            /***************************************/
+            /********** Start Download *************/
+            /***************************************/
+
+            if (!await _startTorrentTaskDownload.ExecuteAsync(torrentTaskId))
+            {
+                return;
+            }
+
+            /***************************************/
+            /********** Download Subtitle **********/
+            /***************************************/
+
+            await _downloadSubtitleForTorrent.GetSubtitleForTorrent(torrentTaskId);
+
+            /***************************************/
+            /******* pair torrent with videos ******/
+            /***************************************/
+
+            if (!await _pairSubtitleWithVideos.Pair(torrentTaskId))
+            {
+                return;
+            }
+
+            /***************************************/
+            /********* Edit Subtitles Process ******/
+            /***************************************/
+
+            await _subtitleEditor.EditSubtitle(torrentTaskId);
+
+            /***************************************/
+            /********** Start FFmpeg Process *******/
+            /***************************************/
+
+            if (!await _ffmpegTaskProcessor.ProcessPairs(torrentTaskId))
+            {
+                return;
+            }
+
+            /***************************************/
+            /********** Upload To Telegram   *******/
+            /***************************************/
 
 
-            await _downloadContext.SaveChangesAsync();
+            /***************************************/
+            /******* Add Document to Database ******/
+            /***************************************/
+
         }
     }
-
 }

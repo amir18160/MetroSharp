@@ -92,7 +92,7 @@ namespace Infrastructure.EmailService
                 {
                     ["fullName"] = userName,
                     ["confirmationLink"] = confirmationLink,
-                    ["year"] = DateTime.Now.Year.ToString(),
+                    ["year"] = DateTime.UtcNow.Year.ToString(),
                     ["appName"] = _appName
                 });
 
@@ -122,7 +122,7 @@ namespace Infrastructure.EmailService
                 {
                     ["fullName"] = userName,
                     ["resetLink"] = resetLink,
-                    ["year"] = DateTime.Now.Year.ToString(),
+                    ["year"] = DateTime.UtcNow.Year.ToString(),
                     ["appName"] = _appName
                 });
 

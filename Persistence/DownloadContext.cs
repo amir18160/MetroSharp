@@ -10,6 +10,7 @@ namespace Persistence
         public DbSet<ApiUsage> ApiUsages { get; set; }
         public DbSet<TorrentTask> TorrentTasks { get; set; }
         public DbSet<TaskDownloadProgress> TaskDownloadProgress { get; set; }
+        public DbSet<SubtitleVideoPair> SubtitleVideoPairs { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -22,6 +23,11 @@ namespace Persistence
                 .HasOne(t => t.TaskDownloadProgress)
                 .WithOne(t => t.TorrentTask)
                 .HasForeignKey<TaskDownloadProgress>(t => t.TorrentTaskId);
+
+            builder.Entity<TorrentTask>()
+                .HasMany(t => t.SubtitleVideoPairs)
+                .WithOne(t => t.TorrentTask)
+                .HasForeignKey(t => t.TorrentTaskId);
         }
     }
 }

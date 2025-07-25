@@ -8,7 +8,8 @@ namespace Application.Interfaces
 {
     public interface IQbitClient
     {
-        Task<List<QbitTorrentInfo>> GetAllQbitTorrentsAsync();  
+        Task<List<QbitTorrentInfo>> GetAllQbitTorrentsAsync();
         Task<bool> AddTorrentAsync(string pathOrMagnetOrTorrentUrl);
+        Task<QbitTorrentInfo> GetQbitTorrentByHashAsync(string hash);
     }
 }

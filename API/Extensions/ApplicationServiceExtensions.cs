@@ -4,6 +4,8 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.SQLite;
+using Infrastructure.BackgroundServices.Models;
+using Infrastructure.BackgroundServices.TelegramBot;
 using Infrastructure.BackgroundServices.TorrentProcessTask;
 using Infrastructure.EmailService;
 using Infrastructure.EmailService.Models;
@@ -15,8 +17,13 @@ using Infrastructure.QbitTorrentClient;
 using Infrastructure.QbitTorrentClient.Models;
 using Infrastructure.Scrapers;
 using Infrastructure.Security;
+using Infrastructure.Utilities;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Persistence;
+using Telegram.Bot;
+using Telegram.Bot.Polling;
 
 namespace API.Extensions
 {
@@ -36,16 +43,14 @@ namespace API.Extensions
                 opt.UseSqlite(config.GetConnectionString("DownloadContext"));
             });
 
-
+            var ConnectionString = config.GetConnectionString("DownloadContext");
 
             services.AddHangfire(configuration => configuration
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
                 .UseSimpleAssemblyNameTypeSerializer()
                 .UseRecommendedSerializerSettings()
-                .UseSQLiteStorage(config.GetConnectionString("DownloadContext")));
+                .UseSQLiteStorage(ConnectionString));
 
-            
-            
             services.AddHangfireServer(options =>
             {
                 options.WorkerCount = 5;
@@ -53,6 +58,19 @@ namespace API.Extensions
 
             services.AddScoped<TorrentTaskProcessor>();
             services.AddHostedService<TaskPollingService>();
+
+            services.AddSingleton<ITelegramBotClient>(sp =>
+            {
+                var settings = sp.GetRequiredService<IOptions<TelegramBotSettings>>().Value;
+                var isDevelopment = sp.GetRequiredService<IHostEnvironment>().IsDevelopment();
+                var dbConnection = new SqliteConnection(settings.TelegramContext);
+                var botToken = isDevelopment ? settings.DevelopmentBotToken : settings.BotToken;
+                return new WTelegramBotClient(botToken, settings.AppId, settings.ApiHash, dbConnection);
+            });
+
+            services.AddSingleton<IUpdateHandler, TelegramUpdateHandler>();
+            services.AddHostedService<TelegramBot>();
+
 
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Application.Users.Commands.Update.Handler).Assembly));
             services.AddAutoMapper(typeof(MappingProfiles).Assembly, typeof(Infrastructure.Core.MappingProfiles).Assembly);
@@ -63,18 +81,32 @@ namespace API.Extensions
             services.AddScoped<IUserAccessor, UserAccessor>();
             services.AddScoped<IGeminiService, GeminiService>();
             services.AddScoped<IScraperFacade, ScraperFacade>();
+            services.AddScoped<IUtilitiesFacade, UtilitiesFacade>();
 
             services.AddHttpClient<IOmdbService, OMDbService>();
+            services.AddHttpClient<ZipDownloader>();
+
+            services.AddSingleton<IQbitClient, QbitClient>();
+            services.AddTransient<IEmailService, EmailService>();
+
 
             services.Configure<SmtpSettings>(config.GetSection("SmtpSettings"));
             services.Configure<EmailSettings>(config.GetSection("EmailSettings"));
             services.Configure<OMDbSettings>(config.GetSection("OMDbSettings"));
             services.Configure<GeminiSettings>(config.GetSection("GeminiSettings"));
             services.Configure<QbitTorrentSettings>(config.GetSection("QbitTorrentSettings"));
+            services.Configure<TorrentTaskSettings>(config.GetSection("TorrentTaskSettings"));
+            services.Configure<TelegramBotSettings>(config.GetSection("TelegramBotSettings"));
 
-            services.AddSingleton<IQbitClient, QbitClient>();
 
-            services.AddTransient<IEmailService, EmailService>();
+            services.AddScoped<TorrentTaskStartConditionChecker>();
+            services.AddScoped<CheckAndGenerateOMDbData>();
+            services.AddScoped<StartTorrentTaskDownload>();
+            services.AddScoped<DownloadSubtitleForTorrent>();
+            services.AddScoped<PairSubtitleWithVideos>();
+            services.AddScoped<SubtitleEditor>();
+            services.AddScoped<FFmpegTaskProcessor>();
+
             return services;
         }
     }

@@ -4,7 +4,7 @@ namespace Domain.Entities
     {
         public Guid Id { get; set; }
         public decimal Progress { get; set; }
-        public int Size { get; set; }
+        public long Size { get; set; }
         public int Speed { get; set; }
 
         public Guid TorrentTaskId { get; set; }

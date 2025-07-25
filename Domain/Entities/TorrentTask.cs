@@ -11,20 +11,25 @@ namespace Domain.Entities
         public string ErrorMessage { get; set; }
         public string TorrentHash { get; set; }
         public string Magnet { get; set; }
+        public string FileSavingPath { get; set; }
         public TorrentTaskType TaskType { get; set; }
         public TorrentTaskPriority Priority { get; set; }
         public string SubtitleUrl { get; set; }
+        public string SubtitleSavingPath { get; set; }
         public string ImdbId { get; set; }
-        public int SeasonNumber { get; set; }
-        public int EpisodeNumber { get; set; }
+        public int? SeasonNumber { get; set; }
+        public int? EpisodeNumber { get; set; }
         public string Regex { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
+        public DateTime? StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+        public DateTime? DownloadStartTime { get; set; }
+        public DateTime? DownloadEndTime { get; set; }
         public string UserId { get; set; }
 
         public TaskDownloadProgress TaskDownloadProgress { get; set; }
-        
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
+        public ICollection<SubtitleVideoPair> SubtitleVideoPairs { get; set; }
+                
+        public DateTime? CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
 }

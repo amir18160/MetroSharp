@@ -23,7 +23,7 @@ namespace Infrastructure.Scrapers.Sites
             }
             catch
             {
-                return new();
+                return [];
             }
 
             return ParseSearchResults(document);

@@ -12,6 +12,8 @@ namespace Application.Core
     {
         public MappingProfiles()
         {
+            // If you want to skip mapping default DateTime values, you must configure this per property in CreateMap calls.
+
             CreateMap<Users.Commands.Update.Command, User>()
                 .ForMember(dest => dest.Id, opt => opt.Ignore())
                 .ForMember(dest => dest.IsActive, opt => opt.Ignore())
@@ -45,6 +47,8 @@ namespace Application.Core
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.User.Name))
                 .ForMember(dest => dest.FreeAt, opt => opt.MapFrom(src => src.FreeAt.HasValue ? src.FreeAt.ToString() : null));
+
+            CreateMap<TorrentManager.Commands.AddTorrentProcess.Command, TorrentTask>();
 
             CreateMap<RarbgPreview, AbstractedLatestTorrent>()
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))

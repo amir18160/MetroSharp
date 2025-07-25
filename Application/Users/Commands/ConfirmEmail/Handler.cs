@@ -22,7 +22,7 @@ namespace Application.Users.Commands.ConfirmEmail
         {
             var emailVerificationsWithUser = await _context.EmailVerifications
                 .Include(x => x.User)
-                .FirstOrDefaultAsync(x => x.Code == request.Code.ToString() && x.Expiration > DateTime.Now && !x.Used, cancellationToken);
+                .FirstOrDefaultAsync(x => x.Code == request.Code.ToString() && x.Expiration > DateTime.UtcNow && !x.Used, cancellationToken);
 
             if (emailVerificationsWithUser == null)
             {
