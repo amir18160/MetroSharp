@@ -2,42 +2,48 @@ using Infrastructure.BackgroundServices.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Telegram.Bot;
-using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
-using WTelegram;
+using WTelegram.Types;
 
-public class TelegramBot : BackgroundService
+namespace Infrastructure.BackgroundServices.TelegramBot
 {
-    private readonly TelegramBotSettings _settings;
-    private readonly IUpdateHandler _updateHandler;
-    private readonly ILogger<TelegramBot> _logger;
-    private readonly ITelegramBotClient _bot;
 
-    public TelegramBot(
-        IOptions<TelegramBotSettings> options,
-        IUpdateHandler updateHandler,
-        ITelegramBotClient bot,
-        ILogger<TelegramBot> logger)
+    public class TelegramBot : BackgroundService
     {
-        _settings = options.Value;
-        _updateHandler = updateHandler;
-        _logger = logger;
-        _bot = bot;
-    }
+        private readonly TelegramBotSettings _settings;
+        private readonly ILogger<TelegramBot> _logger;
+        private readonly WTelegram.Bot _bot;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        var receiverOptions = new ReceiverOptions
+        public TelegramBot(
+            IOptions<TelegramBotSettings> options,
+            WTelegram.Bot bot,
+            ILogger<TelegramBot> logger)
         {
-            AllowedUpdates = [UpdateType.Message],
-            DropPendingUpdates = true
-        };
+            _settings = options.Value;
+            _logger = logger;
+            _bot = bot;
+        }
 
-        // Required to initialize bot session
-        var me = await _bot.GetMe(stoppingToken);
-        _logger.LogInformation("Bot initialized as {Username}", me.Username);
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        {
+            // Required to initialize bot session
+            var me = await _bot.GetMe();
 
-        await _bot.ReceiveAsync(_updateHandler, receiverOptions, stoppingToken);
+            _bot.OnMessage += OnMessage;
+        
+            _logger.LogInformation("Telegram Bot is initialized as {Username}", me.Username);
+
+        }
+
+        private async Task OnMessage(Message message, UpdateType type)
+        {
+            if (message.Text == null) return;
+            var text = message.Text.ToLower();
+            if (text == "/start")
+            {
+
+                await _bot.SendMessage(message.Chat, $"Hello, {message.From}!\nTry commands /pic /react /lastseen /getchat /setphoto", replyParameters: message);
+            }
+        }
     }
 }

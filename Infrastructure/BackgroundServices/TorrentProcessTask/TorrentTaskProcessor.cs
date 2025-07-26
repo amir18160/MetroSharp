@@ -1,103 +1,100 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
 namespace Infrastructure.BackgroundServices.TorrentProcessTask
 {
     public class TorrentTaskProcessor
     {
-        private readonly TorrentTaskStartConditionChecker _conditionChecker;
-        private readonly CheckAndGenerateOMDbData _checkAndGenerateOMDbData;
-        private readonly StartTorrentTaskDownload _startTorrentTaskDownload;
-        private readonly DownloadSubtitleForTorrent _downloadSubtitleForTorrent;
-        private readonly PairSubtitleWithVideos _pairSubtitleWithVideos;
-        private readonly FFmpegTaskProcessor _ffmpegTaskProcessor;
-        private readonly SubtitleEditor _subtitleEditor;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly ILogger<TorrentTaskProcessor> _logger;
 
-
-        public TorrentTaskProcessor
-        (
-            SubtitleEditor subtitleEditor,
-            FFmpegTaskProcessor ffmpegTaskProcessor,
-            PairSubtitleWithVideos pairSubtitleWithVideos,
-            DownloadSubtitleForTorrent downloadSubtitleForTorrent,
-            StartTorrentTaskDownload startTorrentTaskDownload,
-            CheckAndGenerateOMDbData checkAndGenerateOMDbData,
-            TorrentTaskStartConditionChecker conditionChecker
-        )
+        public TorrentTaskProcessor(IServiceProvider serviceProvider, ILogger<TorrentTaskProcessor> logger)
         {
-            _subtitleEditor = subtitleEditor;
-            _ffmpegTaskProcessor = ffmpegTaskProcessor;
-            _pairSubtitleWithVideos = pairSubtitleWithVideos;
-            _downloadSubtitleForTorrent = downloadSubtitleForTorrent;
-            _startTorrentTaskDownload = startTorrentTaskDownload;
-            _checkAndGenerateOMDbData = checkAndGenerateOMDbData;
-            _conditionChecker = conditionChecker;
+            _serviceProvider = serviceProvider;
+            _logger = logger;
         }
+
         public async Task ProcessTorrentTaskAsync(Guid torrentTaskId)
         {
-            /***************************************/
-            /**** Get Task And Check Conditions ****/
-            /***************************************/
-
-            if (!await _conditionChecker.CheckAsync(torrentTaskId))
+            using (var scope = _serviceProvider.CreateScope())
             {
-                return;
+                var conditionChecker = scope.ServiceProvider.GetRequiredService<TorrentTaskStartConditionChecker>();
+                var checkAndGenerateOMDbData = scope.ServiceProvider.GetRequiredService<CheckAndGenerateOMDbData>();
+                var startTorrentTaskDownload = scope.ServiceProvider.GetRequiredService<StartTorrentTaskDownload>();
+                var downloadSubtitleForTorrent = scope.ServiceProvider.GetRequiredService<DownloadSubtitleForTorrent>();
+                var pairSubtitleWithVideos = scope.ServiceProvider.GetRequiredService<PairSubtitleWithVideos>();
+                var ffmpegTaskProcessor = scope.ServiceProvider.GetRequiredService<FFmpegTaskProcessor>();
+                var subtitleEditor = scope.ServiceProvider.GetRequiredService<SubtitleEditor>();
+
+                /***************************************/
+                /**** Get Task And Check Conditions ****/
+                /***************************************/
+
+                if (!await conditionChecker.CheckAsync(torrentTaskId))
+                {
+                    return;
+                }
+
+                /***************************************/
+                /********** Get Omdb Data  *************/
+                /***************************************/
+
+                if (!await checkAndGenerateOMDbData.Checker(torrentTaskId))
+                {
+                    return;
+                }
+
+                /***************************************/
+                /********** Start Download *************/
+                /***************************************/
+
+                if (!await startTorrentTaskDownload.ExecuteAsync(torrentTaskId))
+                {
+                    return;
+                }
+
+                /***************************************/
+                /********** Download Subtitle **********/
+                /***************************************/
+
+                await downloadSubtitleForTorrent.GetSubtitleForTorrent(torrentTaskId);
+
+                /***************************************/
+                /******* pair torrent with videos ******/
+                /***************************************/
+
+                if (!await pairSubtitleWithVideos.Pair(torrentTaskId))
+                {
+                    return;
+                }
+
+                /***************************************/
+                /********* Edit Subtitles Process ******/
+                /***************************************/
+
+                await subtitleEditor.EditSubtitle(torrentTaskId);
+
+                /***************************************/
+                /********** Start FFmpeg Process *******/
+                /***************************************/
+
+                if (!await ffmpegTaskProcessor.ProcessPairs(torrentTaskId))
+                {
+                    return;
+                }
+
+                /***************************************/
+                /********** Upload To Telegram   *******/
+                /***************************************/
+
+                
+                
+                /***************************************/
+                /************** Cleanup ****************/
+                /***************************************/
+
+
             }
-
-            /***************************************/
-            /********** Get Omdb Data  *************/
-            /***************************************/
-
-            if (!await _checkAndGenerateOMDbData.Checker(torrentTaskId))
-            {
-                return;
-            }
-
-            /***************************************/
-            /********** Start Download *************/
-            /***************************************/
-
-            if (!await _startTorrentTaskDownload.ExecuteAsync(torrentTaskId))
-            {
-                return;
-            }
-
-            /***************************************/
-            /********** Download Subtitle **********/
-            /***************************************/
-
-            await _downloadSubtitleForTorrent.GetSubtitleForTorrent(torrentTaskId);
-
-            /***************************************/
-            /******* pair torrent with videos ******/
-            /***************************************/
-
-            if (!await _pairSubtitleWithVideos.Pair(torrentTaskId))
-            {
-                return;
-            }
-
-            /***************************************/
-            /********* Edit Subtitles Process ******/
-            /***************************************/
-
-            await _subtitleEditor.EditSubtitle(torrentTaskId);
-
-            /***************************************/
-            /********** Start FFmpeg Process *******/
-            /***************************************/
-
-            if (!await _ffmpegTaskProcessor.ProcessPairs(torrentTaskId))
-            {
-                return;
-            }
-
-            /***************************************/
-            /********** Upload To Telegram   *******/
-            /***************************************/
-
-
-            /***************************************/
-            /******* Add Document to Database ******/
-            /***************************************/
-
         }
     }
 }

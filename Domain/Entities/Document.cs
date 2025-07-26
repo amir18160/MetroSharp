@@ -9,10 +9,10 @@ namespace Domain.Entities
         public string MimeType { get; set; }
         public string FileId { get; set; }
         public string UniqueFileId { get; set; }
-        public int FileSize { get; set; }
+        public long FileSize { get; set; }
         public string ChatName { get; set; }
         public int MessageId { get; set; }
-        public int ChatId { get; set; }
+        public long ChatId { get; set; }
         public bool IsSubbed { get; set; }
         public string Resolution { get; set; }
         public string Codec { get; set; }

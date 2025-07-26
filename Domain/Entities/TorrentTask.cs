@@ -27,8 +27,9 @@ namespace Domain.Entities
         public string UserId { get; set; }
 
         public TaskDownloadProgress TaskDownloadProgress { get; set; }
-        public ICollection<SubtitleVideoPair> SubtitleVideoPairs { get; set; }
-                
+        public ICollection<TaskUploadProgress> TaskUploadProgress { get; set; } = new List<TaskUploadProgress>();
+        public ICollection<SubtitleVideoPair> SubtitleVideoPairs { get; set; } = new List<SubtitleVideoPair>();
+
         public DateTime? CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }

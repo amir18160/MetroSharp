@@ -22,7 +22,6 @@ namespace Infrastructure.Utilities
         {
             string appPath = AppContext.BaseDirectory;
 
-            // Extract drive root (e.g., "C:\")
             string root = Path.GetPathRoot(appPath);
 
             if (string.IsNullOrWhiteSpace(root))

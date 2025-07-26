@@ -7,5 +7,7 @@ namespace Infrastructure.BackgroundServices.Models
         public string BotToken { get; set; }
         public string DevelopmentBotToken { get; set; }
         public string TelegramContext { get; set; }
+        public long ChannelFileChatID { get; set; }
+
     }
 }

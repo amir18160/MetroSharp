@@ -59,6 +59,8 @@ namespace Infrastructure.OmdbWrapper
                         {
                             _logger.LogError(ex, "Failed to translate using gemini service");
                         }
+
+                        return omdbItem;
                     }
                 }
             }

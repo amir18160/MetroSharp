@@ -100,7 +100,8 @@ namespace Infrastructure.GeminiWrapper.Prompts
             Videos    = [the.boys.s02.E01.bluray.720p, the.boys.s02.E03.bluray.720p, the.boys.s02.E02.bluray.720p]  
             Subtitles = [s01 E01.srt, s01.E2.srt]
             in this example one of our videos has no matching subtitle. 
-            5. the result must be in this format and you must absolutely not return any otherthing or charchter at all.
+            5.i Need you to also clear a few stuff about the files you are processing. i want you to fill two property for each video file one property is season number and the other property is called episode number. if video path name is not indicating that its a series then you will mark it as a movie will another field called isMovie which must be a boolean. 
+            6. the result must be in this format and you must absolutely not return any otherthing or charchter at all.
             you must purly return a response based in the provides data:
             data example: 
             Videos    = [path/the.boys.s01.E01.bluray.720p.mp4, path/the boys s01 E03 720p.mkv, path/the.boys.s01.E02.bluray.720p.avi]  
@@ -109,15 +110,25 @@ namespace Infrastructure.GeminiWrapper.Prompts
             [
                 {
                     "VideoPath": "path/the.boys.s01.E01.bluray.720p.mp4",
-                    "SubtitlePath": "path/s01 E01.srt"
+                    "SubtitlePath": "path/s01 E01.srt",
+                    "IsMovie": false,
+                    "EpisodeNumber": 1,
+                    "SeasonNumber": 1,
+                    
                 },
                 {
                     "VideoPath": "path/the.boys.s01.E02.bluray.720p.avi",
-                    "SubtitlePath": "path/the boys s01 E2.srt"
+                    "SubtitlePath": "path/the boys s01 E2.srt",
+                    "IsMovie": false,
+                    "EpisodeNumber": 2,
+                    "SeasonNumber": 1,
                 },
                 {
                     "VideoPath": "path/the boys s01 E03 720p.mkv",
-                    "SubtitlePath": null
+                    "SubtitlePath": null,
+                    "IsMovie": false,
+                    "EpisodeNumber": 3,
+                    "SeasonNumber": 1,
                 }
             ]
 
@@ -128,15 +139,37 @@ namespace Infrastructure.GeminiWrapper.Prompts
             [
                 {
                     "VideoPath": "path/the.boys.s01.E01.bluray.720p.mp4",
-                    "SubtitlePath": null
+                    "SubtitlePath": null,
+                    "IsMovie": false,
+                    "EpisodeNumber": 1,
+                    "SeasonNumber": 1,
                 },
                 {
                     "VideoPath": "path/the.boys.s01.E02.bluray.720p.avi",
-                    "SubtitlePath": null
+                    "SubtitlePath": null,
+                    "IsMovie": false,
+                    "EpisodeNumber": 2,
+                    "SeasonNumber": 1,
                 },
                 {
                     "VideoPath": "path/the boys s01 E03 720p.mkv",
-                    "SubtitlePath": null
+                    "SubtitlePath": null,
+                    "IsMovie": false,
+                    "EpisodeNumber": 3,
+                    "SeasonNumber": 1,
+                }
+            ]
+            
+            and this is is another example:
+            Videos    = [path/seven.samurai.bluray.720p.mkv]  
+            Subtitles = [] no subtitle is provided here 
+            [
+                {
+                    "VideoPath": "path/seven.samurai.bluray.720p.mkv",
+                    "SubtitlePath": null,
+                    "IsMovie": true,
+                    "EpisodeNumber": null,
+                    "SeasonNumber": null,
                 }
             ]
 

@@ -53,19 +53,19 @@ namespace API.Extensions
 
             services.AddHangfireServer(options =>
             {
-                options.WorkerCount = 5;
+                options.WorkerCount = 1;
             });
 
-            services.AddScoped<TorrentTaskProcessor>();
+            services.AddTransient<TorrentTaskProcessor>();
             services.AddHostedService<TaskPollingService>();
 
-            services.AddSingleton<ITelegramBotClient>(sp =>
+            services.AddSingleton<WTelegram.Bot>(sp =>
             {
                 var settings = sp.GetRequiredService<IOptions<TelegramBotSettings>>().Value;
                 var isDevelopment = sp.GetRequiredService<IHostEnvironment>().IsDevelopment();
                 var dbConnection = new SqliteConnection(settings.TelegramContext);
                 var botToken = isDevelopment ? settings.DevelopmentBotToken : settings.BotToken;
-                return new WTelegramBotClient(botToken, settings.AppId, settings.ApiHash, dbConnection);
+                return new WTelegram.Bot(botToken, settings.AppId, settings.ApiHash, dbConnection);
             });
 
             services.AddSingleton<IUpdateHandler, TelegramUpdateHandler>();

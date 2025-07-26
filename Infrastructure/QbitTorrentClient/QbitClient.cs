@@ -95,7 +95,7 @@ namespace Infrastructure.QbitTorrentClient
 
         public async Task<bool> AddTorrentAsync(string pathOrMagnetOrTorrentUrl)
         {
-            var options = new AddTorrentFilesRequest(pathOrMagnetOrTorrentUrl)
+            var options = new AddTorrentUrlsRequest(new Uri(pathOrMagnetOrTorrentUrl))
             {
                 CreateRootFolder = true,
                 DownloadFolder = _qbitTorrentSettings.DownloadFolder ?? null,
