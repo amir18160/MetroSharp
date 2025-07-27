@@ -58,7 +58,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 task.State = TorrentTaskState.InFfmpegAndProcessStarted;
                 await _context.SaveChangesAsync();
 
-                await ProcessPairs(task);
+                await ProcessPairsInternal(task);
 
                 _logger.LogInformation("Task {TaskId}: FFmpeg process finished.", taskId);
                 return true;
@@ -78,39 +78,46 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             }
         }
 
-        private async Task ProcessPairs(TorrentTask task)
+        private async Task ProcessPairsInternal(TorrentTask task)
         {
             int counter = 0;
+            var orderedPairs = task.SubtitleVideoPairs
+                                    .Where(p => !p.Ignore)
+                                    .OrderBy(p => p.SeasonNumber)
+                                    .ThenBy(p => p.EpisodeNumber)
+                                    .ToList();
 
-            foreach (var pair in task.SubtitleVideoPairs)
+            foreach (var pair in orderedPairs)
             {
-                _logger.LogInformation("Processing pair {counter} out of {total}", ++counter, task.SubtitleVideoPairs.Count);
+                _logger.LogInformation("Processing pair {counter} out of {total} for task {taskId}", ++counter, orderedPairs.Count, task.Id);
 
-                if (!string.IsNullOrWhiteSpace(pair.VideoPath))
+                if (string.IsNullOrWhiteSpace(pair.VideoPath) || !File.Exists(pair.VideoPath))
                 {
-                    if (!string.IsNullOrWhiteSpace(pair.SubtitlePath))
+                    _logger.LogWarning("Invalid or missing VideoPath for pair {pairId}. Marking as ignored.", pair.Id);
+                    pair.Ignore = true;
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(pair.SubtitlePath) && File.Exists(pair.SubtitlePath))
+                {
+                    try
                     {
-                        try
-                        {
-                            pair.FinalPath = await AddSoftSubtitlesInPlaceAsync(pair.VideoPath, [pair.SubtitlePath]);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogWarning(ex, "Failed to process FFmpeg task with pairId {pairId}", pair.Id);
-                            _logger.LogInformation("This task will use the initial path as final path.");
-                            pair.FinalPath = pair.VideoPath;
-                        }
+                        pair.FinalPath = await AddSoftSubtitlesInPlaceAsync(pair.VideoPath, new[] { pair.SubtitlePath });
+                        pair.SubtitlesMerged = true; // Mark as successfully subbed
+                        _logger.LogInformation("Successfully merged subtitles for pair {pairId}", pair.Id);
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        _logger.LogInformation("Pair does not have a subtitle path. Using initial path as final path.");
+                        _logger.LogWarning(ex, "Failed to process FFmpeg task for pairId {pairId}. Using original video path.", pair.Id);
                         pair.FinalPath = pair.VideoPath;
+                        pair.SubtitlesMerged = false; // Explicitly set to false on failure
                     }
                 }
                 else
                 {
-                    _logger.LogInformation("Invalid pair: missing VideoPath. Marking as ignored.");
-                    pair.Ignore = true;
+                    _logger.LogInformation("Pair {pairId} does not have a valid subtitle path. Using original video path.", pair.Id);
+                    pair.FinalPath = pair.VideoPath;
+                    pair.SubtitlesMerged = false; // No subtitles were merged
                 }
             }
 

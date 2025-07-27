@@ -36,37 +36,38 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                try
+                using (var scope = _scopeFactory.CreateScope())
                 {
-                    using var scope = _scopeFactory.CreateScope();
-                    var downloadContext = scope.ServiceProvider.GetRequiredService<DownloadContext>();
-
-                    var pendingTasks = await downloadContext.TorrentTasks
-                        .Where(t => t.State == TorrentTaskState.Pending)
-                        .OrderByDescending(t => t.Priority)
-                        .Take(10)
-                        .ToListAsync(stoppingToken);
-
-                    foreach (var task in pendingTasks)
+                    try
                     {
-                        try
+                        var downloadContext = scope.ServiceProvider.GetRequiredService<DownloadContext>();
+
+                        var pendingTasks = await downloadContext.TorrentTasks
+                            .Where(t => t.State == TorrentTaskState.Pending)
+                            .OrderByDescending(t => t.Priority)
+                            .Take(10)
+                            .ToListAsync(stoppingToken);
+
+                        foreach (var task in pendingTasks)
                         {
-                            _backgroundJobClient.Enqueue<TorrentTaskProcessor>(p => p.ProcessTorrentTaskAsync(task.Id));
-                            task.State = TorrentTaskState.JobQueue;
+                            try
+                            {
+                                _backgroundJobClient.Enqueue<TorrentTaskProcessor>(p => p.ProcessTorrentTaskAsync(task.Id));
+                                task.State = TorrentTaskState.JobQueue;
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Failed to enqueue task {taskId}", task.Id);
+                            }
                         }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Failed to enqueue task {taskId}", task.Id);
-                        }
+
+                        await downloadContext.SaveChangesAsync(stoppingToken);
                     }
-
-                    await downloadContext.SaveChangesAsync(stoppingToken);
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error while polling tasks");
+                    }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error while polling tasks");
-                }
-
                 await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
             }
         }

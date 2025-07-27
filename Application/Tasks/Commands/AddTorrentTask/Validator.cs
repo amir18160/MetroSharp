@@ -1,6 +1,6 @@
 using FluentValidation;
 
-namespace Application.TorrentManager.Commands.AddTorrentProcess
+namespace Application.Tasks.Commands.AddTorrentTask
 {
     public class Validator : AbstractValidator<Command>
     {

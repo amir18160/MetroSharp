@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Persistence;
 
-namespace Application.TorrentManager.Commands.AddTorrentProcess
+namespace Application.Tasks.Commands.AddTorrentTask
 {
     public class Handler : IRequestHandler<Command, Result<Unit>>
     {

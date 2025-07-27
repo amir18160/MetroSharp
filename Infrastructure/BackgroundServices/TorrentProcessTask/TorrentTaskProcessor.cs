@@ -1,17 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.BackgroundServices.TorrentProcessTask
 {
     public class TorrentTaskProcessor
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly ILogger<TorrentTaskProcessor> _logger;
 
-        public TorrentTaskProcessor(IServiceProvider serviceProvider, ILogger<TorrentTaskProcessor> logger)
+        public TorrentTaskProcessor(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
-            _logger = logger;
         }
 
         public async Task ProcessTorrentTaskAsync(Guid torrentTaskId)
@@ -25,75 +22,58 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 var pairSubtitleWithVideos = scope.ServiceProvider.GetRequiredService<PairSubtitleWithVideos>();
                 var ffmpegTaskProcessor = scope.ServiceProvider.GetRequiredService<FFmpegTaskProcessor>();
                 var subtitleEditor = scope.ServiceProvider.GetRequiredService<SubtitleEditor>();
+                var fileUploadProcessor = scope.ServiceProvider.GetRequiredService<FileUploadProcessor>();
+                var taskCleaner = scope.ServiceProvider.GetRequiredService<TaskCleaner>();
 
-                /***************************************/
-                /**** Get Task And Check Conditions ****/
-                /***************************************/
-
-                if (!await conditionChecker.CheckAsync(torrentTaskId))
+                try
                 {
-                    return;
+                    /***************************************/
+                    /**** Get Task And Check Conditions ****/
+                    /***************************************/
+                    if (!await conditionChecker.CheckAsync(torrentTaskId)) return;
+
+                    /***************************************/
+                    /********** Get Omdb Data  *************/
+                    /***************************************/
+                    if (!await checkAndGenerateOMDbData.Checker(torrentTaskId)) return;
+
+                    /***************************************/
+                    /********** Start Download *************/
+                    /***************************************/
+                    if (!await startTorrentTaskDownload.ExecuteAsync(torrentTaskId)) return;
+
+                    /***************************************/
+                    /********** Download Subtitle **********/
+                    /***************************************/
+                    await downloadSubtitleForTorrent.GetSubtitleForTorrent(torrentTaskId);
+
+                    /***************************************/
+                    /******* pair torrent with videos ******/
+                    /***************************************/
+                    if (!await pairSubtitleWithVideos.Pair(torrentTaskId)) return;
+
+                    /***************************************/
+                    /********* Edit Subtitles Process ******/
+                    /***************************************/
+                    await subtitleEditor.EditSubtitle(torrentTaskId);
+
+                    /***************************************/
+                    /********** Start FFmpeg Process *******/
+                    /***************************************/
+                    if (!await ffmpegTaskProcessor.ProcessPairs(torrentTaskId)) return;
+
+                    /***************************************/
+                    /********** Upload To Telegram   *******/
+                    /***************************************/
+                    if (!await fileUploadProcessor.StartUploadProcess(torrentTaskId)) return;
                 }
-
-                /***************************************/
-                /********** Get Omdb Data  *************/
-                /***************************************/
-
-                if (!await checkAndGenerateOMDbData.Checker(torrentTaskId))
+                finally
                 {
-                    return;
+                    /***************************************/
+                    /************** Cleanup ****************/
+                    /***************************************/
+                    await taskCleaner.CleanUpAsync(torrentTaskId);
                 }
-
-                /***************************************/
-                /********** Start Download *************/
-                /***************************************/
-
-                if (!await startTorrentTaskDownload.ExecuteAsync(torrentTaskId))
-                {
-                    return;
-                }
-
-                /***************************************/
-                /********** Download Subtitle **********/
-                /***************************************/
-
-                await downloadSubtitleForTorrent.GetSubtitleForTorrent(torrentTaskId);
-
-                /***************************************/
-                /******* pair torrent with videos ******/
-                /***************************************/
-
-                if (!await pairSubtitleWithVideos.Pair(torrentTaskId))
-                {
-                    return;
-                }
-
-                /***************************************/
-                /********* Edit Subtitles Process ******/
-                /***************************************/
-
-                await subtitleEditor.EditSubtitle(torrentTaskId);
-
-                /***************************************/
-                /********** Start FFmpeg Process *******/
-                /***************************************/
-
-                if (!await ffmpegTaskProcessor.ProcessPairs(torrentTaskId))
-                {
-                    return;
-                }
-
-                /***************************************/
-                /********** Upload To Telegram   *******/
-                /***************************************/
-
-                
-                
-                /***************************************/
-                /************** Cleanup ****************/
-                /***************************************/
-
-
             }
         }
     }

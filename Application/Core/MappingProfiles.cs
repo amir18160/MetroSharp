@@ -1,4 +1,5 @@
 using Application.Scrapers.Queries.GetLatestTorrents;
+using Application.Tasks.Queries.GetTasks;
 using AutoMapper;
 using Domain.Entities;
 using Domain.Enums;
@@ -48,7 +49,7 @@ namespace Application.Core
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.User.Name))
                 .ForMember(dest => dest.FreeAt, opt => opt.MapFrom(src => src.FreeAt.HasValue ? src.FreeAt.ToString() : null));
 
-            CreateMap<TorrentManager.Commands.AddTorrentProcess.Command, TorrentTask>();
+            CreateMap<Tasks.Commands.AddTorrentTask.Command, TorrentTask>();
 
             CreateMap<RarbgPreview, AbstractedLatestTorrent>()
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
@@ -77,6 +78,18 @@ namespace Application.Core
                 .ForMember(dest => dest.Rating, opt => opt.MapFrom(src => src.Rating))
                 .ForMember(dest => dest.Genres, opt => opt.MapFrom(src => src.Genres))
                 .ForMember(dest => dest.Type, opt => opt.MapFrom(_ => TorrentSource.YTS));
+
+            CreateMap<TorrentTask, TaskDto>()
+                .ForMember(dest => dest.State, opt => opt.MapFrom(src => src.State.ToString()))
+                .ForMember(dest => dest.TaskType, opt => opt.MapFrom(src => src.TaskType.ToString()))
+                .ForMember(dest => dest.Priority, opt => opt.MapFrom(src => src.Priority.ToString()))
+                .ForMember(dest => dest.DownloadProgress, opt => opt.MapFrom(src => src.TaskDownloadProgress.Progress))
+                .ForMember(dest => dest.DownloadSize, opt => opt.MapFrom(src => src.TaskDownloadProgress.Size))
+                .ForMember(dest => dest.DownloadSpeed, opt => opt.MapFrom(src => src.TaskDownloadProgress.Speed))
+                .ForMember(dest => dest.UploadProgress, opt => opt.MapFrom(src => src.TaskUploadProgress));
+
+            CreateMap<TaskUploadProgress, UploadProgressDto>();
+
         }
 
         private static int TryParseInt(string value)

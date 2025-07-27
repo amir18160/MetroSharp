@@ -12,5 +12,6 @@ namespace Domain.Entities
         public bool IsMovie { get; set; }
         public int EpisodeNumber { get; set; }
         public int SeasonNumber { get; set; }
+        public bool SubtitlesMerged { get; set; }
     }
 }

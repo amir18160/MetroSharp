@@ -22,7 +22,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Persistence;
-using Telegram.Bot;
+
 using Telegram.Bot.Polling;
 
 namespace API.Extensions
@@ -106,6 +106,8 @@ namespace API.Extensions
             services.AddScoped<PairSubtitleWithVideos>();
             services.AddScoped<SubtitleEditor>();
             services.AddScoped<FFmpegTaskProcessor>();
+            services.AddScoped<FileUploadProcessor>();
+            services.AddScoped<TaskCleaner>();
 
             return services;
         }
