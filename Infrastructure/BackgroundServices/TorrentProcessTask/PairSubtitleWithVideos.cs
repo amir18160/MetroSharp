@@ -72,9 +72,15 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
             try
             {
-                var result = await _geminiService.GenerateContentAsync(AiPrompts.GeneratePairJson(Videos, Subtitles));
+                var rawResult = await _geminiService.GenerateContentAsync(AiPrompts.GeneratePairJson(Videos, Subtitles));
 
-                List<SubtitleVideoPair> pairs = JsonSerializer.Deserialize<List<SubtitleVideoPair>>(result);
+                var cleanedJson = rawResult
+                    .Trim()
+                    .Replace("```json", "")
+                    .Replace("```", "")
+                    .Trim();
+
+                List<SubtitleVideoPair> pairs = JsonSerializer.Deserialize<List<SubtitleVideoPair>>(cleanedJson);
 
                 foreach (var p in pairs)
                 {

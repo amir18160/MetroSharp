@@ -211,7 +211,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 }
                 document.Type = DocumentType.Movie;
             }
-            else
+            else // It's a series
             {
                 if (omdbItem.Type != OmdbItemType.Series)
                 {
@@ -219,24 +219,32 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                     return false;
                 }
 
-                var season = omdbItem.Seasons.FirstOrDefault(s => s.SeasonNumber == pair.SeasonNumber);
-                if (season == null)
+                if (pair.SeasonNumber.HasValue && pair.EpisodeNumber.HasValue)
                 {
-                    _logger.LogInformation("Season {seasonNumber} not found for series {imdbId}. Creating it.", pair.SeasonNumber, task.ImdbId);
-                    season = new Season { SeasonNumber = pair.SeasonNumber, OmdbItem = omdbItem };
-                    omdbItem.Seasons.Add(season);
-                }
+                    var season = omdbItem.Seasons.FirstOrDefault(s => s.SeasonNumber == pair.SeasonNumber.Value);
+                    if (season == null)
+                    {
+                        _logger.LogInformation("Season {seasonNumber} not found for series {imdbId}. Creating it.", pair.SeasonNumber.Value, task.ImdbId);
+                        season = new Season { SeasonNumber = pair.SeasonNumber.Value, OmdbItem = omdbItem };
+                        omdbItem.Seasons.Add(season);
+                    }
 
-                var episode = season.Episodes.FirstOrDefault(e => e.EpisodeNumber == pair.EpisodeNumber);
-                if (episode == null)
+                    var episode = season.Episodes.FirstOrDefault(e => e.EpisodeNumber == pair.EpisodeNumber.Value);
+                    if (episode == null)
+                    {
+                        _logger.LogInformation("Episode {episodeNumber} of Season {seasonNumber} not found for series {imdbId}. Creating it.", pair.EpisodeNumber.Value, pair.SeasonNumber.Value, task.ImdbId);
+                        episode = new Episode { EpisodeNumber = pair.EpisodeNumber.Value, Season = season };
+                        season.Episodes.Add(episode);
+                    }
+
+                    document.Type = DocumentType.Episode;
+                    document.Episode = episode;
+                }
+                else
                 {
-                    _logger.LogInformation("Episode {episodeNumber} of Season {seasonNumber} not found for series {imdbId}. Creating it.", pair.EpisodeNumber, pair.SeasonNumber, task.ImdbId);
-                    episode = new Episode { EpisodeNumber = pair.EpisodeNumber, Season = season };
-                    season.Episodes.Add(episode);
+                    _logger.LogError("Cannot process series document for task {taskId} because SeasonNumber or EpisodeNumber is null.", task.Id);
+                    return false;
                 }
-
-                document.Type = DocumentType.Episode;
-                document.Episode = episode;
             }
 
             _dataContext.Documents.Add(document);

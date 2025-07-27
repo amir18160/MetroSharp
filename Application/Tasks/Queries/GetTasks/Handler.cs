@@ -57,21 +57,34 @@ namespace Application.Tasks.Queries.GetTasks
             if (request.UpdatedAt != null)
                 query = query.ApplyDateFilter(request.UpdatedAt, t => t.UpdatedAt);
 
-            var tasksWithUsers = await query
-                .Join(_dataContext.Users,
-                      task => task.UserId,
-                      user => user.Id,
-                      (task, user) => new { Task = task, User = user })
+            // Get the total count for pagination before applying skip and take
+            var count = await query.CountAsync(cancellationToken);
+
+            // Now, apply pagination to the query
+            var pagedTasks = await query.Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
                 .ToListAsync(cancellationToken);
-
-            var taskDtos = _mapper.Map<List<TaskDto>>(tasksWithUsers.Select(x => x.Task));
             
-            for(int i = 0; i < taskDtos.Count; i++)
-            {
-                taskDtos[i].UserName = tasksWithUsers[i].User.UserName;
-            }
+            // Get the user IDs from the paginated list of tasks
+            var userIds = pagedTasks.Select(t => t.UserId).Distinct().ToList();
 
-            var pagedList = await PagedList<TaskDto>.CreateAsync(taskDtos.AsQueryable(), request.PageNumber, request.PageSize);
+            // Fetch the corresponding users
+            var users = await _dataContext.Users
+                .Where(u => userIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, cancellationToken);
+
+            var taskDtos = _mapper.Map<List<TaskDto>>(pagedTasks);
+            
+            // Add the UserName to each DTO
+            foreach(var taskDto in taskDtos)
+            {
+                if(users.TryGetValue(taskDto.UserId, out var user))
+                {
+                    taskDto.UserName = user.UserName;
+                }
+            }
+            
+            var pagedList = new PagedList<TaskDto>(taskDtos, count, request.PageNumber, request.PageSize);
             
             return Result<PagedList<TaskDto>>.Success(pagedList);
         }

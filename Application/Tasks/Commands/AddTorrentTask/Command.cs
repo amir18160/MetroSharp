@@ -7,7 +7,6 @@ namespace Application.Tasks.Commands.AddTorrentTask
     public class Command : IRequest<Result<Unit>>
     {
         public string Title { get; set; }
-        public TorrentTaskState State { get; set; }
         public string Magnet { get; set; }
         public TorrentTaskType TaskType { get; set; }
         public TorrentTaskPriority Priority { get; set; }

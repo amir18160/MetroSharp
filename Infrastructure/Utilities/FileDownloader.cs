@@ -34,6 +34,15 @@ namespace Infrastructure.Utilities
                         throw new InvalidDataException("The file is not a valid zip file (unexpected content type).");
 
                     await using var stream = await response.Content.ReadAsStreamAsync();
+
+                    var directory = Path.GetDirectoryName(destinationPath);
+
+                    if (!Path.Exists(directory))
+                    {
+                        Directory.CreateDirectory(directory);
+                    }
+                    
+
                     await using var fileStream = File.Create(destinationPath);
                     await stream.CopyToAsync(fileStream);
 

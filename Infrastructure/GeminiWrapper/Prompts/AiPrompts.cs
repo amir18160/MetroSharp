@@ -71,113 +71,144 @@ namespace Infrastructure.GeminiWrapper.Prompts
 
         public static string GeneratePairJson(List<string> moviePaths, List<string> subtitlePaths)
         {
-            string videoList = string.Join(", ", moviePaths.Select(s => s));
-            string subtitleList = string.Join(", ", subtitlePaths.Select(s => s));
+            string videoList = string.Join(", ", moviePaths.Select(s => $"\"{s}\""));
+            string subtitleList = string.Join(", ", subtitlePaths.Select(s => $"\"{s}\""));
 
             return $$"""
-            i will provide you with two list of strings. both lists include one or more paths of files on my disk.
-            one list is paths of videos and the other is a list of path to subtitles.
-            i want you to match videos to related subtitles and return an array of jsons.
-            you need to consider these:
-            1. each video can only match one subtitle by their name.
-            2. some videos might match multiple subtitles, but you only pick one and generate only one json for it in that array.
-            3. some videos might have no matching subtitles so in json you put null for subtitle value.
-            4. sometimes you have to look at the patern of names to match subtitles with videos. for example we have this data: Videos = [path/seven.samurai.720p.x264.duubed.bluray.AC3.mkv] subtitles = [path/seven.samurai.srt, seven.samurai.720p.rarbg.srt]. both subtitle examples are both a match to our subtitle. so you pick closest match whch is the second example in this case: seven.samurai.720p.rarbg.srt.
-            some other times pattern is not similar since both subtitles and videos are closely related you should pick with closes one.
-            this is another example you must consider:
-            Videos    = [path/the.boys.s01.E01.bluray.720p, path/the.boys.s01.E03.bluray.720p, path/the.boys.s01.E02.bluray.720p]  
-            Subtitles = [path/the.boys.s01.E01.bluray.srt, path/the.boys.s01.E2.bluray.srt, path/s1.E3.bluray.720p]
-            based on above exmaple each video is a match to exaclt one subtitle.
-            and even we might have this example:
-            Videos    = [the.boys.s01.E01.bluray.720p, the.boys.s01.E03.bluray.720p, the.boys.s01.E02.bluray.720p]  
-            Subtitles = [s01 E01.srt, s01.E2.srt, s1 E3.720p]
-            and in this we can find a match for each videos in subtitle list. what matter's here is that we already know subtitles are related to the videos.
-            this is another example:
-            Videos    = [the.boys.s02.E01.bluray.720p, the.boys.s02.E03.bluray.720p, the.boys.s02.E02.bluray.720p]  
-            Subtitles = [s01 E01.srt, s01.E2.srt, s1 E3.720p]
-            in this example we how no match for any of our videos becuase the season is diffrent in our subtitles which means we have completely wring subtitles.
-            this is another example:
-            Videos    = [the.boys.s02.E01.bluray.720p, the.boys.s02.E03.bluray.720p, the.boys.s02.E02.bluray.720p]  
-            Subtitles = [s01 E01.srt, s01.E2.srt]
-            in this example one of our videos has no matching subtitle. 
-            5.i Need you to also clear a few stuff about the files you are processing. i want you to fill two property for each video file one property is season number and the other property is called episode number. if video path name is not indicating that its a series then you will mark it as a movie will another field called isMovie which must be a boolean. 
-            6. the result must be in this format and you must absolutely not return any otherthing or charchter at all.
-            you must purly return a response based in the provides data:
-            data example: 
-            Videos    = [path/the.boys.s01.E01.bluray.720p.mp4, path/the boys s01 E03 720p.mkv, path/the.boys.s01.E02.bluray.720p.avi]  
-            Subtitles = [path/s01 E01.srt, path/the boys s01 E2.srt]
-            response example:
-            [
-                {
-                    "VideoPath": "path/the.boys.s01.E01.bluray.720p.mp4",
-                    "SubtitlePath": "path/s01 E01.srt",
-                    "IsMovie": false,
-                    "EpisodeNumber": 1,
-                    "SeasonNumber": 1,
-                    
-                },
-                {
-                    "VideoPath": "path/the.boys.s01.E02.bluray.720p.avi",
-                    "SubtitlePath": "path/the boys s01 E2.srt",
-                    "IsMovie": false,
-                    "EpisodeNumber": 2,
-                    "SeasonNumber": 1,
-                },
-                {
-                    "VideoPath": "path/the boys s01 E03 720p.mkv",
-                    "SubtitlePath": null,
-                    "IsMovie": false,
-                    "EpisodeNumber": 3,
-                    "SeasonNumber": 1,
-                }
-            ]
+                You are a smart assistant designed to match subtitle files to video files.
 
-            Another Example:
-            Videos    = [path/the.boys.s01.E01.bluray.720p.mp4, path/the boys s01 E03 720p.mkv, path/the.boys.s01.E02.bluray.720p.avi]  
-            Subtitles = [] no subtitle is provided here
-            response example:
-            [
+                I will provide you with two lists:
+                - A list of **video file paths**
+                - A list of **subtitle file paths**
+
+                You must return a **JSON array** where:
+                - Each object represents a video and its most appropriate subtitle
+                - If no subtitle matches, set "SubtitlePath": null
+
+                ## RULES YOU MUST FOLLOW STRICTLY:
+
+                1. You must **never** include subtitle paths in the video list or vice versa.
+                2. Match each video to **only one** subtitle (the best match based on filename similarity).
+                3. Use filename similarity rules (season, episode, resolution, etc.) to match subtitles to videos.
+                4. If a video contains season/episode info → it's a TV episode:
+                - Set "IsMovie": false
+                - Set SeasonNumber and EpisodeNumber as integers
+                5. If a video contains **no season/episode info** → it's a movie:
+                - Set "IsMovie": true
+                - Set SeasonNumber and EpisodeNumber to null
+                6. Your result MUST be a **pure JSON array only**. Do not explain anything. Do not add extra characters or text.
+                7. Use **exact property names**:
+                - VideoPath
+                - SubtitlePath
+                - IsMovie
+                - EpisodeNumber
+                - SeasonNumber
+
+                ## EXAMPLES YOU MUST FOLLOW:
+
+                ### Example 1 (TV series, good match):
+                VideoPaths = [
+                "/home/user/Downloads/The.Boys.S01E01.720p.WEB-DL.mkv",
+                "/home/user/Downloads/The.Boys.S01E02.720p.WEB-DL.mkv",
+                "/home/user/Downloads/The.Boys.S01E03.720p.WEB-DL.mkv"
+                ]
+                SubtitlePaths = [
+                "/home/user/Downloads/The.Boys.S01E01.srt",
+                "/home/user/Downloads/The.Boys.S01E02.srt"
+                ]
+                Expected Output:
+                [
                 {
-                    "VideoPath": "path/the.boys.s01.E01.bluray.720p.mp4",
-                    "SubtitlePath": null,
+                    "VideoPath": "/home/user/Downloads/The.Boys.S01E01.720p.WEB-DL.mkv",
+                    "SubtitlePath": "/home/user/Downloads/The.Boys.S01E01.srt",
                     "IsMovie": false,
                     "EpisodeNumber": 1,
-                    "SeasonNumber": 1,
+                    "SeasonNumber": 1
                 },
                 {
-                    "VideoPath": "path/the.boys.s01.E02.bluray.720p.avi",
-                    "SubtitlePath": null,
+                    "VideoPath": "/home/user/Downloads/The.Boys.S01E02.720p.WEB-DL.mkv",
+                    "SubtitlePath": "/home/user/Downloads/The.Boys.S01E02.srt",
                     "IsMovie": false,
                     "EpisodeNumber": 2,
-                    "SeasonNumber": 1,
+                    "SeasonNumber": 1
                 },
                 {
-                    "VideoPath": "path/the boys s01 E03 720p.mkv",
+                    "VideoPath": "/home/user/Downloads/The.Boys.S01E03.720p.WEB-DL.mkv",
                     "SubtitlePath": null,
                     "IsMovie": false,
                     "EpisodeNumber": 3,
-                    "SeasonNumber": 1,
+                    "SeasonNumber": 1
                 }
-            ]
-            
-            and this is is another example:
-            Videos    = [path/seven.samurai.bluray.720p.mkv]  
-            Subtitles = [] no subtitle is provided here 
-            [
+                ]
+
+                ### Example 2 (Movie, no subtitle):
+                VideoPaths = [
+                "/home/user/Downloads/Big.Buck.Bunny.1080p.Bluray.mkv"
+                ]
+                SubtitlePaths = []
+                Expected Output:
+                [
                 {
-                    "VideoPath": "path/seven.samurai.bluray.720p.mkv",
+                    "VideoPath": "/home/user/Downloads/Big.Buck.Bunny.1080p.Bluray.mkv",
                     "SubtitlePath": null,
                     "IsMovie": true,
                     "EpisodeNumber": null,
-                    "SeasonNumber": null,
+                    "SeasonNumber": null
                 }
-            ]
+                ]
 
-            This is the actual list that you have to response to it:
-            VideoPaths = [{{videoList}}]
-            VideoPaths = [{{subtitlePaths}}]
-            """;
+                ### Example 3 (Wrong season):
+                VideoPaths = [
+                "/home/user/Downloads/The.Boys.S02E01.720p.WEB-DL.mkv"
+                ]
+                SubtitlePaths = [
+                "/home/user/Downloads/The.Boys.S01E01.srt"
+                ]
+                Expected Output:
+                [
+                {
+                    "VideoPath": "/home/user/Downloads/The.Boys.S02E01.720p.WEB-DL.mkv",
+                    "SubtitlePath": null,
+                    "IsMovie": false,
+                    "EpisodeNumber": 1,
+                    "SeasonNumber": 2
+                }
+                ]
+
+                ### Example 4 (Messy filenames, still match):
+                VideoPaths = [
+                "/home/user/Downloads/The.Boys.S01E01.720p.WEB-DL.mkv",
+                "/home/user/Downloads/The.Boys.S01E02.720p.WEB-DL.mkv"
+                ]
+                SubtitlePaths = [
+                "/home/user/Downloads/s01 e01.srt",
+                "/home/user/Downloads/s1e2.final.subs.srt"
+                ]
+                Expected Output:
+                [
+                {
+                    "VideoPath": "/home/user/Downloads/The.Boys.S01E01.720p.WEB-DL.mkv",
+                    "SubtitlePath": "/home/user/Downloads/s01 e01.srt",
+                    "IsMovie": false,
+                    "EpisodeNumber": 1,
+                    "SeasonNumber": 1
+                },
+                {
+                    "VideoPath": "/home/user/Downloads/The.Boys.S01E02.720p.WEB-DL.mkv",
+                    "SubtitlePath": "/home/user/Downloads/s1e2.final.subs.srt",
+                    "IsMovie": false,
+                    "EpisodeNumber": 2,
+                    "SeasonNumber": 1
+                }
+                ]
+
+                NOW YOUR TASK:
+
+                Based on the following lists, return the correct JSON array according to the rules and format above.
+
+                VideoPaths = [{{videoList}}]  
+                SubtitlePaths = [{{subtitleList}}]
+                """;
         }
-
     }
 }

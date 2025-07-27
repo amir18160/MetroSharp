@@ -10,8 +10,8 @@ namespace Domain.Entities
         public Guid TorrentTaskId { get; set; }
         public TorrentTask TorrentTask { get; set; }
         public bool IsMovie { get; set; }
-        public int EpisodeNumber { get; set; }
-        public int SeasonNumber { get; set; }
+        public int? EpisodeNumber { get; set; }
+        public int? SeasonNumber { get; set; }
         public bool SubtitlesMerged { get; set; }
     }
 }

@@ -52,9 +52,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             }
             if (string.IsNullOrWhiteSpace(task.SubtitleUrl))
             {
-                task.State = TorrentTaskState.Error;
                 task.UpdatedAt = DateTime.UtcNow;
-                task.ErrorMessage = $"No SubtitleUrl found for task with id <{taskId}>";
                 await _context.SaveChangesAsync();
                 return false;
             }

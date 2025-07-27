@@ -155,6 +155,10 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 torrentDetails.State == QbitTorrentState.FetchingMetadata ||
                 torrentDetails.State == QbitTorrentState.ForcedFetchingMetadata;
 
+            if (!isMetaState && task.State == TorrentTaskState.InQbitButDownloadNotStarted)
+            {
+                task.State = TorrentTaskState.InQbitAndDownloadStarted;
+            }
             bool exceeded = DateTime.UtcNow > task.DownloadStartTime?.AddMinutes(_settings.MaxAllowedTimeToGetMetaData);
 
             return isMetaState && exceeded;
