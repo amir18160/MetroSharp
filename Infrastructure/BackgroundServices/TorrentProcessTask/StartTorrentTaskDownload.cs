@@ -124,7 +124,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 {
                     task.State = TorrentTaskState.TorrentWasDownloaded;
                     task.DownloadEndTime = DateTime.UtcNow;
-                    task.FileSavingPath = latest.SavePath;
+                    task.FileSavingPath = latest.ContentPath;
                     await _context.SaveChangesAsync();
                     break;
                 }

@@ -33,6 +33,12 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 return false;
             }
 
+            if (task.State != TorrentTaskState.JobQueue)
+            {
+                _logger.LogWarning("Task is not in the correct state to start. Task Id: {Id}", torrentTaskId);
+                return false;
+            }
+
             if (SystemResources.GetCurrentDriveFreeSpace() < _settings.MinimumRequiredSpace)
             {
                 throw new Exception(

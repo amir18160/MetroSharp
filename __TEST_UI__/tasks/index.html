@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetroSharp Task Viewer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Main Application Container -->
+    <div id="app">
+        <!-- Login Section -->
+        <div id="login-container" class="container">
+            <h1>Login</h1>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="btn">Login</button>
+                <p id="login-error" class="error-message"></p>
+            </form>
+        </div>
+
+        <!-- Task Viewer Section (hidden by default) -->
+        <div id="task-container" class="container hidden">
+            <div class="header">
+                <h1>Task Dashboard</h1>
+                <button id="logout-btn" class="btn btn-secondary">Logout</button>
+            </div>
+
+            <!-- Task Filters -->
+            <div id="filters">
+                <input type="text" id="title-filter" placeholder="Filter by Title...">
+                <select id="state-filter">
+                    <option value="">All States</option>
+                    <!-- Options will be populated by JS -->
+                </select>
+                <button id="filter-btn" class="btn">Apply Filters</button>
+            </div>
+
+            <!-- Task Table -->
+            <div class="table-container">
+                <table id="task-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>User</th>
+                            <th>Progress</th>
+                            <th>Created At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="task-table-body">
+                        <!-- Task rows will be populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="loading" class="hidden">Loading tasks...</div>
+
+            <!-- Pagination Controls -->
+            <div id="pagination">
+                <button id="prev-page" class="btn" disabled>Previous</button>
+                <span id="page-info">Page 1 of 1</span>
+                <button id="next-page" class="btn" disabled>Next</button>
+            </div>
+        </div>
+
+        <!-- Modal for Task Details -->
+        <div id="task-modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-button">&times;</span>
+                <h2>Task Details</h2>
+                <div id="modal-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

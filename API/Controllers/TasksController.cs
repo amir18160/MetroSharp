@@ -30,5 +30,12 @@ namespace API.Controllers
             var result = await Mediator.Send(query);
             return HandleResult(result);
         }
+
+        [HttpDelete("cancel-task/{id}")]
+        public async Task<IActionResult> CancelTask([FromRoute] Commands.CancelTask.Command command)
+        {
+            var result = await Mediator.Send(command);
+            return HandleResult(result);
+        }
     }
 }

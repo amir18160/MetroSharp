@@ -18,5 +18,7 @@ namespace Domain.Enums
         InUploaderAndUploadingStarted,
         Completed,
         Error,
+        Cancelling,
+        Cancelled
     }
 }

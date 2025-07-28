@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.BackgroundServices.TorrentProcessTask
@@ -11,6 +12,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             _serviceProvider = serviceProvider;
         }
 
+        [AutomaticRetry(Attempts = 0)]
         public async Task ProcessTorrentTaskAsync(Guid torrentTaskId)
         {
             using (var scope = _serviceProvider.CreateScope())

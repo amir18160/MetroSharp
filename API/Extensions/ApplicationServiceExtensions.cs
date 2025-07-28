@@ -115,6 +115,7 @@ namespace API.Extensions
             services.AddScoped<FFmpegTaskProcessor>();
             services.AddScoped<FileUploadProcessor>();
             services.AddScoped<TaskCleaner>();
+            services.AddScoped<ITaskManager, TaskManager>();
 
             return services;
         }

@@ -25,6 +25,7 @@ namespace Domain.Entities
         public DateTime? DownloadStartTime { get; set; }
         public DateTime? DownloadEndTime { get; set; }
         public string UserId { get; set; }
+        public int? FfmpegPID { get; set; }
 
         public TaskDownloadProgress TaskDownloadProgress { get; set; }
         public ICollection<TaskUploadProgress> TaskUploadProgress { get; set; } = new List<TaskUploadProgress>();

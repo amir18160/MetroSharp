@@ -75,7 +75,9 @@ namespace Infrastructure.ProwlarrWrapper
 
         public async Task<List<SearchResult>> Search(SearchOptions options)
         {
-            string query = "/api/v1/indexer" + BuildSearchQuery(options);
+            string query = "/api/v1/search?" + BuildSearchQuery(options);
+
+            System.Console.WriteLine(query);
 
             return await GetResponse<List<SearchResult>>(query);
         }

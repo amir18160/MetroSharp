@@ -2,6 +2,9 @@ using Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Persistence;
+using System.Diagnostics;
+using System.Linq;
+
 
 namespace Infrastructure.BackgroundServices.TorrentProcessTask
 {
@@ -29,6 +32,10 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             }
 
             _logger.LogInformation("Starting cleanup for task {taskId}.", taskId);
+
+            // 0. Kill FFmpeg process
+            KillFFmpegProcess(taskId);
+
 
             // 1. Delete torrent from qBittorrent client
             if (!string.IsNullOrEmpty(task.TorrentHash))
@@ -80,6 +87,33 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             }
             
             _logger.LogInformation("Cleanup for task {taskId} completed.", taskId);
+        }
+        
+        private void KillFFmpegProcess(Guid taskId)
+        {
+            var task = _context.TorrentTasks.Find(taskId);
+            if (task?.FfmpegPID.HasValue == true)
+            {
+                try
+                {
+                    var process = Process.GetProcessById(task.FfmpegPID.Value);
+                    process.Kill();
+                    _logger.LogInformation("Killed ffmpeg process {ProcessId} for task {TaskId}", process.Id, taskId);
+                }
+                catch (ArgumentException)
+                {
+                    // Process already exited.
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not kill ffmpeg process with PID {pid} for task {TaskId}", task.FfmpegPID.Value, taskId);
+                }
+                finally
+                {
+                    task.FfmpegPID = null;
+                    _context.SaveChanges();
+                }
+            }
         }
     }
 }

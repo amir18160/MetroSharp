@@ -49,7 +49,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 return false;
             }
 
-            if (task.TaskUploadProgress.Any())
+            if (task.TaskUploadProgress.Count != 0)
             {
                 _downloadContext.RemoveRange(task.TaskUploadProgress);
                 if (!(await _downloadContext.SaveChangesAsync() > 0))
@@ -66,14 +66,15 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 .ToList();
 
             bool allUploadsSuccessful = true;
+            var failureCount = 0;
             foreach (var pair in orderedPairs)
             {
                 bool uploadSuccess = await UploadFileFromPair(task, pair);
                 if (!uploadSuccess)
                 {
                     allUploadsSuccessful = false;
-                    _logger.LogError("Upload failed for pair {pairId} in task {taskId}. Aborting remaining uploads.", pair.Id, task.Id);
-                    break;
+                    failureCount++;
+                    _logger.LogError("Upload failed for pair {pairId} in task {taskId}. continue remaining uploads.", pair.Id, task.Id);
                 }
             }
 
@@ -85,7 +86,8 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             else
             {
                 task.State = TorrentTaskState.Error;
-                task.ErrorMessage = "One or more files failed to upload.";
+                _logger.LogInformation("Number of Failed Documents is: {failureCount}", failureCount);
+                task.ErrorMessage = $"One or more files failed to upload. number of failed documents: {failureCount}";
             }
 
             await _downloadContext.SaveChangesAsync();
@@ -95,6 +97,21 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
         private async Task<bool> UploadFileFromPair(TorrentTask task, SubtitleVideoPair pair)
         {
             var filePath = pair.FinalPath;
+
+            try
+            {
+                var fileInfo = new FileInfo(filePath);
+                if (fileInfo.Length > _settings.MaxAllowedUploadSize)
+                {
+                    _logger.LogError("File {fileName} is larger than 2GB and cannot be uploaded to Telegram.", Path.GetFileName(filePath));
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Could not get file info for {filePath}.", filePath);
+                return false;
+            }
 
             var uploadProgress = new TaskUploadProgress
             {
@@ -144,9 +161,10 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                     }
                 });
 
+                var inputFile = Telegram.Bot.Types.InputFile.FromStream(progressStream, Path.GetFileName(filePath));
                 var uploadResult = await _botClient.SendDocument(
                     chatId: _settings.ChannelFileChatID,
-                    document: progressStream,
+                    document: inputFile,
                     caption: GenerateCaption(task, Path.GetFileName(filePath))
                 );
 

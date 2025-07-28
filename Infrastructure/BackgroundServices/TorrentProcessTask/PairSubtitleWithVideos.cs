@@ -1,12 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
-using Infrastructure.GeminiWrapper;
 using Infrastructure.GeminiWrapper.Prompts;
 using Infrastructure.Utilities;
 using Microsoft.EntityFrameworkCore;
@@ -58,9 +53,16 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             task.State = TorrentTaskState.InParingSubtitlesWithVideo;
             task.UpdatedAt = DateTime.UtcNow;
             await _context.SubtitleVideoPairs.AddRangeAsync(pairedResult);
-            await _context.SaveChangesAsync();
 
-            _logger.LogError("Failed to pair any video with matching subtitles.");
+            var res = await _context.SaveChangesAsync() > 0;
+
+            if (!res)
+            {
+                task.State = TorrentTaskState.Error;
+                await _context.SaveChangesAsync();
+                _logger.LogError("Failed to pair any video with matching subtitles.");
+                return false;
+            }
 
             return true;
         }
@@ -84,6 +86,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
                 foreach (var p in pairs)
                 {
+                    p.Id = Guid.NewGuid();
                     p.TorrentTask = task;
                     p.TorrentTaskId = task.Id;
                 }

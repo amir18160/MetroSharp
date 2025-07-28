@@ -102,7 +102,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 {
                     try
                     {
-                        pair.FinalPath = await AddSoftSubtitlesInPlaceAsync(pair.VideoPath, new[] { pair.SubtitlePath });
+                        pair.FinalPath = await AddSoftSubtitlesInPlaceAsync(pair.VideoPath, new[] { pair.SubtitlePath }, task.Id);
                         pair.SubtitlesMerged = true; // Mark as successfully subbed
                         _logger.LogInformation("Successfully merged subtitles for pair {pairId}", pair.Id);
                     }
@@ -124,7 +124,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             await _context.SaveChangesAsync();
         }
 
-        public async Task<string> AddSoftSubtitlesInPlaceAsync(string inputVideoPath, string[] subtitlePaths)
+        public async Task<string> AddSoftSubtitlesInPlaceAsync(string inputVideoPath, string[] subtitlePaths, Guid taskId)
         {
             if (!File.Exists(inputVideoPath))
             {
@@ -150,7 +150,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 workingInputPath = Path.Combine(dir, $"{baseName}.temp.mkv");
                 string convertArgs = $"-i \"{inputVideoPath}\" -c copy -y \"{workingInputPath}\"";
 
-                await RunFfmpegAsync(convertArgs);
+                await RunFfmpegAsync(convertArgs, taskId);
 
                 try { File.Delete(inputVideoPath); }
                 catch (Exception ex) { _logger.LogWarning(ex, "Could not delete original input video: {path}", inputVideoPath); }
@@ -168,7 +168,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
             args += $" -c:v copy -c:a copy -y \"{tempOutputPath}\"";
 
-            await RunFfmpegAsync(args);
+            await RunFfmpegAsync(args, taskId);
 
             try
             {
@@ -192,7 +192,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             return inputVideoPath;
         }
 
-        private async Task RunFfmpegAsync(string arguments)
+        private async Task RunFfmpegAsync(string arguments, Guid taskId)
         {
             var process = new Process
             {
@@ -209,8 +209,23 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
             process.Start();
 
+            var task = await _context.TorrentTasks.FindAsync(taskId);
+            if (task != null)
+            {
+                task.FfmpegPID = process.Id;
+                await _context.SaveChangesAsync();
+            }
+
+
             string stderr = await process.StandardError.ReadToEndAsync();
             await process.WaitForExitAsync();
+
+            if (task != null)
+            {
+                task.FfmpegPID = null;
+                await _context.SaveChangesAsync();
+            }
+
 
             if (process.ExitCode != 0)
                 throw new Exception($"FFmpeg failed:\n{stderr}");
