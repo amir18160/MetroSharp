@@ -1,9 +1,18 @@
-using Application.Core;
-using Application.Interfaces;
-using FluentValidation;
-using FluentValidation.AspNetCore;
 using Hangfire;
 using Hangfire.SQLite;
+
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+using FluentValidation;
+using FluentValidation.AspNetCore;
+
+using Application.Core;
+using Application.Interfaces;
+
+using Persistence;
+
 using Infrastructure.BackgroundServices.Models;
 using Infrastructure.BackgroundServices.TelegramBot;
 using Infrastructure.BackgroundServices.TorrentProcessTask;
@@ -13,15 +22,12 @@ using Infrastructure.GeminiWrapper;
 using Infrastructure.GeminiWrapper.Models;
 using Infrastructure.OmdbWrapper;
 using Infrastructure.OmdbWrapper.Models;
+using Infrastructure.ProwlarrWrapper.Models;
 using Infrastructure.QbitTorrentClient;
 using Infrastructure.QbitTorrentClient.Models;
 using Infrastructure.Scrapers;
 using Infrastructure.Security;
 using Infrastructure.Utilities;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Persistence;
 
 using Telegram.Bot.Polling;
 
@@ -57,6 +63,7 @@ namespace API.Extensions
             });
 
             services.AddTransient<TorrentTaskProcessor>();
+            services.AddTransient<TaskCleaner>();
             services.AddHostedService<TaskPollingService>();
 
             services.AddSingleton<WTelegram.Bot>(sp =>
@@ -70,7 +77,6 @@ namespace API.Extensions
 
             services.AddSingleton<IUpdateHandler, TelegramUpdateHandler>();
             services.AddHostedService<TelegramBot>();
-
 
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Application.Users.Commands.Update.Handler).Assembly));
             services.AddAutoMapper(typeof(MappingProfiles).Assembly, typeof(Infrastructure.Core.MappingProfiles).Assembly);
@@ -97,6 +103,7 @@ namespace API.Extensions
             services.Configure<QbitTorrentSettings>(config.GetSection("QbitTorrentSettings"));
             services.Configure<TorrentTaskSettings>(config.GetSection("TorrentTaskSettings"));
             services.Configure<TelegramBotSettings>(config.GetSection("TelegramBotSettings"));
+            services.Configure<ProwlarrSettings>(config.GetSection("ProwlarrSettings"));
 
 
             services.AddScoped<TorrentTaskStartConditionChecker>();
@@ -108,6 +115,38 @@ namespace API.Extensions
             services.AddScoped<FFmpegTaskProcessor>();
             services.AddScoped<FileUploadProcessor>();
             services.AddScoped<TaskCleaner>();
+
+            return services;
+        }
+
+        public static IServiceCollection AddCorsPolicy(
+            this IServiceCollection services,
+            string policyName,
+            IConfiguration config,
+            IWebHostEnvironment env)
+        {
+            services.AddCors(options =>
+            {
+                options.AddPolicy(name: policyName, policy =>
+                {
+                    if (env.IsDevelopment())
+                    {
+                        policy.WithOrigins("http://localhost", "null")
+                            .AllowAnyHeader()
+                            .AllowAnyMethod();
+                    }
+                    else
+                    {
+                        var allowedOrigins = config.GetValue<string>("CorsSettings:AllowedOrigins");
+                        if (!string.IsNullOrEmpty(allowedOrigins))
+                        {
+                            policy.WithOrigins(allowedOrigins.Split(';', StringSplitOptions.RemoveEmptyEntries))
+                                .AllowAnyHeader()
+                                .AllowAnyMethod();
+                        }
+                    }
+                });
+            });
 
             return services;
         }
