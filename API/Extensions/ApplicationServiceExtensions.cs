@@ -30,6 +30,7 @@ using Infrastructure.Security;
 using Infrastructure.Utilities;
 
 using Telegram.Bot.Polling;
+using Infrastructure.SystemInfo;
 
 namespace API.Extensions
 {
@@ -88,6 +89,8 @@ namespace API.Extensions
             services.AddScoped<IGeminiService, GeminiService>();
             services.AddScoped<IScraperFacade, ScraperFacade>();
             services.AddScoped<IUtilitiesFacade, UtilitiesFacade>();
+            services.AddScoped<ISystemInfoService, SystemInfoService>();
+
 
             services.AddHttpClient<IOmdbService, OMDbService>();
             services.AddHttpClient<ZipDownloader>();

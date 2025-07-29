@@ -1,3 +1,4 @@
+using System.Text;
 using Infrastructure.BackgroundServices.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -26,11 +27,12 @@ namespace Infrastructure.BackgroundServices.TelegramBot
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // Required to initialize bot session
+            CreateLogger();
+
             var me = await _bot.GetMe();
 
             _bot.OnMessage += OnMessage;
-        
+
             _logger.LogInformation("Telegram Bot is initialized as {Username}", me.Username);
 
         }
@@ -44,6 +46,23 @@ namespace Infrastructure.BackgroundServices.TelegramBot
 
                 await _bot.SendMessage(message.Chat, $"Hello, {message.From}!\nTry commands /pic /react /lastseen /getchat /setphoto", replyParameters: message);
             }
+        }
+
+        private void CreateLogger()
+        {
+            var directory = Path.GetDirectoryName(_settings.LogPath);
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var stream = new FileStream(_settings.LogPath, FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
+            StreamWriter WTelegramLogs = new StreamWriter(stream, Encoding.UTF8)
+            {
+                AutoFlush = true
+            };
+
+            WTelegram.Helpers.Log = (lvl, str) => WTelegramLogs.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{"TDIWE!"[lvl]}] {str}");
         }
     }
 }

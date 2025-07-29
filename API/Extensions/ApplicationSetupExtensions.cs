@@ -16,14 +16,13 @@ namespace API.Extensions
                 var services = scope.ServiceProvider;
                 try
                 {
-                    await TaskRecovery.RecoverInterruptedTasks(services);
-
                     var dataContext = services.GetRequiredService<DataContext>();
                     var downloadContext = services.GetRequiredService<DownloadContext>();
                     var userManager = services.GetRequiredService<UserManager<User>>();
                     var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
                     var logger = services.GetRequiredService<ILogger<Program>>();
 
+                    logger.LogInformation("Running Application Startup...");
 
                     var DlContextPendingMigrations = await downloadContext.Database.GetPendingMigrationsAsync();
                     if (DlContextPendingMigrations.Any())
@@ -47,7 +46,6 @@ namespace API.Extensions
                         logger.LogInformation("No pending migrations for Data Context.");
                     }
 
-
                     var shouldSeedRoles = !roleManager.Roles.Any();
                     if (shouldSeedRoles)
                     {
@@ -61,6 +59,8 @@ namespace API.Extensions
                         logger.LogInformation("Seeding application data...");
                         await DataSeeder.SeedAsync(dataContext, userManager);
                     }
+
+                    await TaskRecovery.RecoverInterruptedTasks(services);
                 }
                 catch (Exception ex)
                 {

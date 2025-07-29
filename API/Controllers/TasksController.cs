@@ -37,5 +37,12 @@ namespace API.Controllers
             var result = await Mediator.Send(command);
             return HandleResult(result);
         }
+
+        [HttpPatch("retry-task/{id}")]
+        public async Task<IActionResult> RetryTask([FromRoute] Commands.RetryTask.Command command)
+        {
+            var result = await Mediator.Send(command);
+            return HandleResult(result);
+        }
     }
 }

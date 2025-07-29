@@ -9,5 +9,6 @@ namespace Infrastructure.BackgroundServices.Models
         public string TelegramContext { get; set; }
         public long ChannelFileChatID { get; set; }
         public long MaxAllowedUploadSize { get; set; }
+        public string LogPath { get; set; }
     }
 }
