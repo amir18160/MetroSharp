@@ -1,11 +1,12 @@
+using System.Linq;
 using System.Reflection;
 using TypeGen.Core.SpecGeneration;
 
 namespace Domain
 {
-    public class TypeGen : GenerationSpec
+    public class DomainSpec : GenerationSpec
     {
-        public TypeGen()
+        public DomainSpec()
         {
             var assembly = Assembly.GetExecutingAssembly();
 
@@ -19,5 +20,4 @@ namespace Domain
             }
         }
     }
-
 }
