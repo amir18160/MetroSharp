@@ -1,12 +1,15 @@
 using System.Net.Http.Json;
 using System.Web;
+using Application.Interfaces;
+using Domain.Models.Prowlarr;
 using Infrastructure.ProwlarrWrapper.Models;
+using Microsoft.Extensions.Options;
 
 namespace Infrastructure.ProwlarrWrapper
 {
-    public class Prowlarr
+    public class Prowlarr: IProwlarr
     {
-        private readonly HttpClient _baseHttpClient = new HttpClient();
+        private readonly HttpClient _baseHttpClient;
         private readonly string _apiKey;
         private readonly string _apiUrl;
 
@@ -14,11 +17,11 @@ namespace Infrastructure.ProwlarrWrapper
         ******** Constructor     *********
         *********************************/
 
-        public Prowlarr(string apiUrl, string apiKey)
+        public Prowlarr(IOptions<ProwlarrSettings> settings, HttpClient httpClient)
         {
-            _apiUrl = apiUrl;
-            _apiKey = apiKey;
-
+            _apiUrl = settings.Value.HostURL;
+            _apiKey = settings.Value.ApiKey;
+            _baseHttpClient = httpClient;
             _baseHttpClient.BaseAddress = new Uri(_apiUrl.EndsWith('/') ? _apiUrl : _apiUrl + "/");
             _baseHttpClient.DefaultRequestHeaders.Add("X-Api-Key", _apiKey);
         }

@@ -14,6 +14,7 @@
     <PackageReference Include="Mscc.GenerativeAI" Version="2.6.7" />
     <PackageReference Include="QBittorrent.Client" Version="1.9.24285.1" />
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.0" />
+    <PackageReference Include="TMDbLib" Version="2.2.0" />
     <PackageReference Include="WTelegramBot" Version="9.0.2" />
   </ItemGroup>
 
