@@ -47,15 +47,7 @@ namespace API.Controllers
                 using var reader = new StreamReader(stream);
                 var content = await reader.ReadToEndAsync();
 
-                var lines = content
-                    .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Where(line => !string.IsNullOrWhiteSpace(line))
-                    .ToList();
-
-                // Combine lines as a JSON array
-                var jsonArray = "[" + string.Join(",", lines) + "]";
-
-                return Content(jsonArray, "application/json");
+                return Content(content, "plain/text");
             }
             catch (Exception ex)
             {

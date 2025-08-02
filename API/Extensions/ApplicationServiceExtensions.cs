@@ -22,7 +22,7 @@ using Infrastructure.GeminiWrapper;
 using Infrastructure.GeminiWrapper.Models;
 using Infrastructure.OmdbWrapper;
 using Infrastructure.OmdbWrapper.Models;
-using Infrastructure.ProwlarrWrapper.Models;
+
 using Infrastructure.QbitTorrentClient;
 using Infrastructure.QbitTorrentClient.Models;
 using Infrastructure.Scrapers;
@@ -31,6 +31,10 @@ using Infrastructure.Utilities;
 
 using Telegram.Bot.Polling;
 using Infrastructure.SystemInfo;
+using Infrastructure.ProwlarrWrapper.Models;
+using Infrastructure.ProwlarrWrapper;
+using Infrastructure.TMDbService.Models;
+using Infrastructure.TMDbService;
 
 namespace API.Extensions
 {
@@ -90,6 +94,8 @@ namespace API.Extensions
             services.AddScoped<IScraperFacade, ScraperFacade>();
             services.AddScoped<IUtilitiesFacade, UtilitiesFacade>();
             services.AddScoped<ISystemInfoService, SystemInfoService>();
+            services.AddScoped<IProwlarr, Prowlarr>();
+            services.AddScoped<ITMDbService, TMDbService>();
 
 
             services.AddHttpClient<IOmdbService, OMDbService>();
@@ -107,6 +113,7 @@ namespace API.Extensions
             services.Configure<TorrentTaskSettings>(config.GetSection("TorrentTaskSettings"));
             services.Configure<TelegramBotSettings>(config.GetSection("TelegramBotSettings"));
             services.Configure<ProwlarrSettings>(config.GetSection("ProwlarrSettings"));
+            services.Configure<TMDbSettings>(config.GetSection("TMDbSettings"));
 
 
             services.AddScoped<TorrentTaskStartConditionChecker>();
