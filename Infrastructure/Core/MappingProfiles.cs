@@ -1,6 +1,9 @@
 using System.Reflection;
 using AutoMapper;
 using Domain.Models.Qbit;
+using Domain.Models.Scrapers.Common;
+using Domain.Models.Scrapers.Sub2fm;
+using Domain.Models.Scrapers.Subsource;
 using Domain.Models.TMDb.General;
 using QBittorrent.Client;
 
@@ -29,9 +32,18 @@ namespace Infrastructure.Core
                 .ForMember(dest => dest.Poster, opt => opt.MapFrom(src => BuildImageUrl(src.PosterPath)))
                 .ForMember(dest => dest.Backdrop, opt => opt.MapFrom(src => BuildImageUrl(src.BackdropPath)));
 
-
             CreateMap<TMDbLib.Objects.Movies.Movie, Domain.Models.TMDb.Movies.Movie>();
             CreateMap<TMDbLib.Objects.TvShows.TvShow, Domain.Models.TMDb.TvShows.TvShow>();
+
+            CreateMap<SubsourceSearchResult, SubtitleSearch>()
+                .ForMember(dest => dest.Link, opt => opt.MapFrom(src => src.Href));
+            CreateMap<SubF2mSubtitleSearchResult, SubtitleSearch>()
+                .ForMember(dest => dest.Link, opt => opt.MapFrom(src => src.Url));
+
+            CreateMap<SubF2mSubtitleDetail, SubtitleListItem>()
+                .ForMember(dest => dest.Link, opt => opt.MapFrom(src => src.Url))
+                .ForMember(dest => dest.Source, opt => opt.MapFrom(src => SubtitleSource.Sub2fm))
+                .ForMember(dest => dest.Caption, opt => opt.MapFrom(src => src.Description));       
         }
 
 

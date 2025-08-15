@@ -2,14 +2,14 @@ namespace Domain.Enums
 {
     public enum TorrentTaskType
     {
-        Movie,
+        Movie = 0,
 
-        SingleEpisode,
-        RangedEpisodes,
+        SingleEpisode = 1,
+        RangedEpisodes = 2,
 
-        FullSeason,
+        FullSeason = 3,
 
-        AllSeasons,
-        RangedSeasons
+        AllSeasons = 4,
+        RangedSeasons = 5
     }
 }

@@ -2,6 +2,7 @@ namespace Infrastructure.BackgroundServices.Models
 {
     public class TelegramBotSettings
     {
+        public bool IsEnabled { get; set; }
         public int AppId { get; set; }
         public string ApiHash { get; set; }
         public string BotToken { get; set; }

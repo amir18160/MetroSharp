@@ -17,7 +17,11 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
         private readonly ILogger<TaskPollingService> _logger;
         private readonly TorrentTaskSettings _settings;
 
-        public TaskPollingService(IServiceScopeFactory scopeFactory, IBackgroundJobClient backgroundJobClient, ILogger<TaskPollingService> logger, IOptions<TorrentTaskSettings> settings)
+        public TaskPollingService(
+            IServiceScopeFactory scopeFactory,
+            IBackgroundJobClient backgroundJobClient,
+            ILogger<TaskPollingService> logger,
+            IOptions<TorrentTaskSettings> settings)
         {
             _settings = settings.Value;
             _scopeFactory = scopeFactory;
@@ -52,7 +56,10 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                         {
                             try
                             {
-                                _backgroundJobClient.Enqueue<TorrentTaskProcessor>(p => p.ProcessTorrentTaskAsync(task.Id));
+                                _backgroundJobClient.Enqueue<TorrentTaskProcessor>(
+                                    p => p.ProcessTorrentTaskAsync(task.Id, stoppingToken)
+                                );
+
                                 task.State = TorrentTaskState.JobQueue;
                             }
                             catch (Exception ex)
@@ -63,12 +70,21 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
                         await downloadContext.SaveChangesAsync(stoppingToken);
                     }
+                    catch (OperationCanceledException)
+                    {
+                        _logger.LogInformation("Torrent Task Polling Service is stopping...");
+                    }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error while polling tasks");
                     }
                 }
-                await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
+                }
+                catch (TaskCanceledException) { }
             }
         }
     }

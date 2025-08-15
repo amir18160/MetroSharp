@@ -23,9 +23,13 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             _settings = settings.Value;
         }
 
-        public async Task<bool> CheckAsync(Guid torrentTaskId)
-        {   
-            var task = await _context.TorrentTasks.FindAsync(torrentTaskId);
+        public async Task<bool> CheckAsync(Guid torrentTaskId, CancellationToken cancellationToken = default)
+        {
+            // Respect cancellation early
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Use FindAsync with cancellation token
+            var task = await _context.TorrentTasks.FindAsync(new object[] { torrentTaskId }, cancellationToken);
 
             if (task == null)
             {
@@ -39,6 +43,9 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 return false;
             }
 
+            // Check cancellation before doing potentially blocking / long-running checks
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (SystemResources.GetCurrentDriveFreeSpace() < _settings.MinimumRequiredSpace)
             {
                 throw new Exception(
@@ -47,7 +54,9 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
             task.StartTime = DateTime.UtcNow;
             task.State = TorrentTaskState.JobStarted;
-            await _context.SaveChangesAsync();
+
+            // Persist changes with cancellation token
+            await _context.SaveChangesAsync(cancellationToken);
             return true;
         }
     }

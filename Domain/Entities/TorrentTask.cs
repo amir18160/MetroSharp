@@ -14,7 +14,7 @@ namespace Domain.Entities
         public string FileSavingPath { get; set; }
         public TorrentTaskType TaskType { get; set; }
         public TorrentTaskPriority Priority { get; set; }
-        public string SubtitleUrl { get; set; }
+        public string SubtitleStoredPath { get; set; }
         public string SubtitleSavingPath { get; set; }
         public string ImdbId { get; set; }
         public int? SeasonNumber { get; set; }

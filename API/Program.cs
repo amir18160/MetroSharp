@@ -4,7 +4,7 @@ using Domain.Core;
 using Hangfire;
 using Serilog;
 
-// Configure Serilog for bootstrap logging first
+
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .WriteTo.Console()
@@ -16,14 +16,12 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    // Configure Serilog, now reading from appsettings.json
     builder.Host.UseSerilog((context, services, configuration) => {
         configuration
             .ReadFrom.Configuration(context.Configuration)
             .ReadFrom.Services(services)
             .Enrich.FromLogContext();
         
-        // Add the console sink only in the Development environment
         if (context.HostingEnvironment.IsDevelopment())
         {
             configuration.WriteTo.Console();
@@ -37,7 +35,6 @@ try
 
     var app = builder.Build();
 
-    // Use Serilog for HTTP request logging
     app.UseSerilogRequestLogging();
 
     app.UseMiddleware<ExceptionMiddleware>();

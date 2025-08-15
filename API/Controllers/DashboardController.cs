@@ -13,7 +13,7 @@ namespace API.Controllers
     public class DashboardController : BaseApiController
     {
         [HttpGet("system-info")]
-        public async Task<IActionResult> GetSystemInfo(Queries.GetSystemInfo.Query query)
+        public async Task<IActionResult> GetSystemInfo([FromQuery] Queries.GetSystemInfo.Query query)
         {
             var res = await Mediator.Send(query);
             return HandleResult(res);

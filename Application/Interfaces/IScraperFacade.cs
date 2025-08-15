@@ -1,3 +1,4 @@
+using Domain.Models.Scrapers.Common;
 using Domain.Models.Scrapers.Rarbg;
 using Domain.Models.Scrapers.ScreenRent;
 using Domain.Models.Scrapers.Sub2fm;
@@ -85,22 +86,27 @@ namespace Application.Interfaces
         /// <summary>
         /// Searches for subtitles on SubF2m.
         /// </summary>
-        Task<List<SubF2mSubtitleSearchResult>> SearchSubF2mAsync(string query);
+        Task<List<SubtitleSearch>> SearchSubF2mAsync(string query);
+
+        /// <summary>
+        /// Gets Subtitles list for a subtitle from SubF2m.
+        /// </summary>
+        Task<List<SubtitleListItem>> GetSubF2mSubtitlesAsync(string query);
 
         /// <summary>
         /// Gets the final download link for a subtitle from SubF2m.
         /// </summary>
-        Task<SubF2SubtitleDownload> GetSubF2mDownloadLinkAsync(string url);
+        Task<string> GetSubF2mDownloadLinkAsync(string url);
         
         /// <summary>
         /// Searches for subtitles on Subsource.
         /// </summary>
-        Task<ICollection<SubsourceSearchResult>> SearchSubsourceAsync(string query);
+        Task<List<SubtitleSearch>> SearchSubsourceAsync(string query);
 
         /// <summary>
         /// Gets all subtitles available for a given Subsource show URL.
         /// </summary>
-        Task<ICollection<SubsourceTableEntity>> GetSubsourceSubtitlesForUrlAsync(string url);
+        Task<List<SubtitleListItem>> GetSubsourceSubtitlesForUrlAsync(string url);
 
         /// <summary>
         /// Gets the final download link for a subtitle from Subsource.

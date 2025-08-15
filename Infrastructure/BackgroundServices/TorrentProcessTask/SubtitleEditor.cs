@@ -18,33 +18,42 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             _logger = logger;
         }
 
-        public async Task EditSubtitle(Guid taskId)
+        public async Task EditSubtitle(Guid taskId, CancellationToken cancellationToken = default)
         {
+            // Respect cancellation immediately
+            cancellationToken.ThrowIfCancellationRequested();
+
             var task = await _context.TorrentTasks
                 .Include(x => x.SubtitleVideoPairs)
-                .FirstOrDefaultAsync(x => x.Id == taskId);
+                .FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
 
             if (task == null)
             {
                 _logger.LogWarning("No task found with ID {taskId}", taskId);
+                return;
             }
 
             if (task.SubtitleVideoPairs.Count == 0)
             {
                 _logger.LogInformation("No subtitle/video pairs found to edit.");
+                return;
             }
 
             _logger.LogInformation("Found {count} subtitle/video pairs to process.", task.SubtitleVideoPairs.Count);
 
-            ProcessPairs(task);
+            // Process pairs with cancellation token
+            await ProcessPairs(task, cancellationToken);
         }
 
-        private void ProcessPairs(TorrentTask task)
+        private async Task ProcessPairs(TorrentTask task, CancellationToken cancellationToken)
         {
             int counter = 1;
 
+            // iterate through pairs and check cancellation between iterations
             foreach (var pair in task.SubtitleVideoPairs)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 _logger.LogInformation("Processing subtitle {counter} of {total}", counter++, task.SubtitleVideoPairs.Count);
 
                 if (string.IsNullOrWhiteSpace(pair.SubtitlePath))
@@ -61,8 +70,15 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
                 try
                 {
-                    EditAndSaveSubtitle(pair.SubtitlePath);
+                    // Offload heavy parsing/editing to a background task to avoid blocking worker thread.
+                    await EditAndSaveSubtitleAsync(pair.SubtitlePath, cancellationToken);
                     _logger.LogInformation("Successfully edited subtitle: {subtitlePath}", pair.SubtitlePath);
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.LogInformation("Subtitle editing was cancelled for path {subtitlePath}", pair.SubtitlePath);
+                    // propagate so upstream can handle cancellation consistently
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -71,9 +87,16 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             }
         }
 
-        private void EditAndSaveSubtitle(string path)
+        private async Task EditAndSaveSubtitleAsync(string path, CancellationToken cancellationToken)
         {
-            var subtitle = Subtitle.Parse(path);
+            // allow early cancellation
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Parse subtitle on threadpool; Task.Run accepts token to avoid scheduling if already cancelled.
+            var subtitle = await Task.Run(() => Subtitle.Parse(path), cancellationToken);
+
+            // Check after parse in case cancellation happened during parse.
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (subtitle.Paragraphs.Count == 0)
             {
@@ -82,10 +105,15 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
             var updated = InsertMetroMovieSpread(subtitle.Paragraphs);
 
+            // Replace paragraphs
             subtitle.Paragraphs.Clear();
             subtitle.Paragraphs.AddRange(updated);
 
-            File.WriteAllText(path, new SubRip().ToText(subtitle, "untitled"));
+            // Persist file write on threadpool; not cancellable mid-write, but token prevents scheduling if already cancelled.
+            await Task.Run(() =>
+            {
+                File.WriteAllText(path, new SubRip().ToText(subtitle, "untitled"));
+            }, cancellationToken);
         }
 
         public static List<Paragraph> InsertMetroMovieSpread(List<Paragraph> originalParagraphs, int insertCount = 3)

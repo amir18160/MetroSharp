@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AngleSharp.Dom;
 using Domain.Models.Scrapers.Subsource;
 using Infrastructure.Scrapers.Core;
@@ -7,10 +8,12 @@ namespace Infrastructure.Scrapers.Sites
 {
     public class SubsourceScraper : ScraperBase
     {
+
+        private static readonly JsonSerializerOptions serializerOptions = new() { PropertyNameCaseInsensitive = true };
         private static readonly string _baseUrl = "https://subsource.net";
         private static string GenerateSearchUrl(string query)
         {
-            return $"{_baseUrl}/search/${query}";
+            return $"{_baseUrl}/search?q={query}";
         }
 
         private static List<SubsourceTableEntity> ParseSubtitleTable(IDocument document)
@@ -52,29 +55,55 @@ namespace Infrastructure.Scrapers.Sites
         }
 
 
-        public static async Task<ICollection<SubsourceSearchResult>> SearchSubtitle(string query)
+        public static async Task<SubsourceSearchResultResponse> SearchSubtitleApi(string query)
+        {
+            var url = "https://api.subsource.net/v1/movie/search";
+
+            var body = new
+            {
+                query = query,
+                limit = 50,
+                includeSeasons = true,
+                signal = ""
+            };
+
+            var response = await BrowserFetchJsonAsync(url: url, method: "POST", body: body, headless: true);
+            var result = JsonSerializer.Deserialize<SubsourceSearchResultResponse>(
+                response,
+                serializerOptions
+            );
+
+            return result;
+        }
+
+        public static async Task<List<SubsourceSearchResult>> SearchSubtitle(string query)
         {
             var document = await GetDocumentFromPlaywrightAsync(GenerateSearchUrl(query), async (page) =>
-                {
-                    await page.Locator("p", new PageLocatorOptions { HasText = "Search Results" })
-                            .WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
-                });
+            {
+                await page.Locator("h1", new PageLocatorOptions { HasText = "Search Results" })
+                          .WaitForAsync(new LocatorWaitForOptions { Timeout = 10000 });
+            });
 
-            var posterImages = document.QuerySelectorAll("img[alt='poster']");
+            // Updated selector for each result card
+            var cards = document.QuerySelectorAll("div.group.bg-white");
+
             var results = new List<SubsourceSearchResult>();
 
-            foreach (var img in posterImages)
+            foreach (var card in cards)
             {
-                var imageUrl = img.GetAttribute("src");
-                var titleElement = img.ParentElement
-                    ?.QuerySelector("p.MuiTypography-root");
-
-                var title = titleElement?.TextContent?.Trim();
-
-                var anchor = img.Closest("a");
+                // Anchor containing href
+                var anchor = card.QuerySelector("a.block");
                 var href = anchor?.GetAttribute("href");
 
-                if (!string.IsNullOrEmpty(imageUrl) && !string.IsNullOrEmpty(title) && !string.IsNullOrEmpty(href))
+                // Poster image (alt now contains movie name)
+                var img = card.QuerySelector("img");
+                var imageUrl = img?.GetAttribute("src");
+
+                // Title is now in <h3>
+                var titleElement = card.QuerySelector("h3");
+                var title = titleElement?.TextContent?.Trim();
+
+                if (!string.IsNullOrEmpty(href) && !string.IsNullOrEmpty(imageUrl) && !string.IsNullOrEmpty(title))
                 {
                     results.Add(new SubsourceSearchResult
                     {
@@ -85,16 +114,24 @@ namespace Infrastructure.Scrapers.Sites
                 }
             }
 
-            Console.WriteLine(results.Count);
-
             if (results.Count == 0)
             {
-                throw new Exception("no result");
+                throw new Exception("No results found — site structure may have changed again.");
             }
+
             return results;
         }
 
-        public static async Task<ICollection<SubsourceTableEntity>> GetSubtitlesForUrl(string url)
+        public static async Task<SubsourceSubtitlesList> GetSubtitlesForUrlApi(string url)
+        {
+            var response = await BrowserFetchJsonAsync(url, headless: true);
+            var result = JsonSerializer.Deserialize<SubsourceSubtitlesList>(response, serializerOptions);
+            return result;
+
+        }
+
+
+        public static async Task<List<SubsourceTableEntity>> GetSubtitlesForUrl(string url)
         {
             var results = new Dictionary<string, SubsourceTableEntity>();
 
@@ -172,5 +209,16 @@ namespace Infrastructure.Scrapers.Sites
             return downloadHref;
         }
 
+        public static async Task<string> GetDownloadLinkFromUrlViaApi(string url)
+        {
+            var response = await BrowserNavigateJsonAsync(url: url, headless: false);
+            var result = JsonSerializer.Deserialize<SubsourceDownloadDetails>(
+                response,
+                serializerOptions
+            );
+            
+            var downloadLink = "https://api.subsource.net/v1/subtitle/download/" + result.Subtitle.DownloadToken;
+            return downloadLink;
+        }
     }
 }

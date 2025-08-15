@@ -30,7 +30,7 @@ namespace Infrastructure.Scrapers.Sites
 
             var img = wrap.QuerySelector("img");
             var src = img?.GetAttribute("src");
-            movie.ImageUrl = string.IsNullOrWhiteSpace(src) ? null : $"{_baseUrl}{src}";
+            movie.ImageUrl = string.IsNullOrWhiteSpace(src) ? null : $"{src}";
             var rating = wrap.QuerySelector("figcaption .rating")?.TextContent?.Trim();
             movie.Rating = rating;
 

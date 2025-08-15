@@ -1,9 +1,0 @@
-{
-  "generationSpecs": [
-    {
-      "$type": "Domain.DomainSpec, Domain"
-    }
-  ],
-  "outputPath": "../generated-ts",
-  "fileHeading": "// Auto-generated. Do not edit."
-}

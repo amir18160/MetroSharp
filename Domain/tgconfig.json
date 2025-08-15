@@ -1,0 +1,10 @@
+{
+    "generationSpecs": [
+        "DomainSpec"
+    ],
+    "outputPath": "typescript",
+    "exportTypesAsInterfacesByDefault": true,
+    "propertyNameConverters": [
+        "PascalCaseToCamelCaseConverter"
+    ]
+}

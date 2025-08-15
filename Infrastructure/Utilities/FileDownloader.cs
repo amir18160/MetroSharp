@@ -48,7 +48,7 @@ namespace Infrastructure.Utilities
 
                     return;
                 }
-                catch when (attempt <= maxRetries)
+                catch (Exception ex) when (attempt <= maxRetries)
                 {
                     if (attempt == maxRetries)
                         throw;

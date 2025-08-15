@@ -27,12 +27,15 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             _botClient = botClient;
         }
 
-        public async Task<bool> StartUploadProcess(Guid taskId)
+        public async Task<bool> StartUploadProcess(Guid taskId, CancellationToken cancellationToken = default)
         {
+            // respect cancellation right away
+            cancellationToken.ThrowIfCancellationRequested();
+
             var task = await _downloadContext.TorrentTasks
                 .Include(x => x.SubtitleVideoPairs)
                 .Include(x => x.TaskUploadProgress)
-                .FirstOrDefaultAsync(x => x.Id == taskId);
+                .FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
 
             if (task == null)
             {
@@ -45,14 +48,14 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 task.State = TorrentTaskState.Error;
                 task.UpdatedAt = DateTime.UtcNow;
                 task.ErrorMessage = $"No valid files found to upload for task with id {taskId}";
-                await _downloadContext.SaveChangesAsync();
+                await _downloadContext.SaveChangesAsync(cancellationToken);
                 return false;
             }
 
             if (task.TaskUploadProgress.Count != 0)
             {
                 _downloadContext.RemoveRange(task.TaskUploadProgress);
-                if (!(await _downloadContext.SaveChangesAsync() > 0))
+                if (!(await _downloadContext.SaveChangesAsync(cancellationToken) > 0))
                 {
                     _logger.LogError("Failed to clear previous upload progress for task {taskId}", task.Id);
                     return false;
@@ -69,7 +72,10 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             var failureCount = 0;
             foreach (var pair in orderedPairs)
             {
-                bool uploadSuccess = await UploadFileFromPair(task, pair);
+                // check cancellation between files
+                cancellationToken.ThrowIfCancellationRequested();
+
+                bool uploadSuccess = await UploadFileFromPair(task, pair, cancellationToken);
                 if (!uploadSuccess)
                 {
                     allUploadsSuccessful = false;
@@ -90,12 +96,15 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 task.ErrorMessage = $"One or more files failed to upload. number of failed documents: {failureCount}";
             }
 
-            await _downloadContext.SaveChangesAsync();
+            await _downloadContext.SaveChangesAsync(cancellationToken);
             return allUploadsSuccessful;
         }
 
-        private async Task<bool> UploadFileFromPair(TorrentTask task, SubtitleVideoPair pair)
+        private async Task<bool> UploadFileFromPair(TorrentTask task, SubtitleVideoPair pair, CancellationToken cancellationToken)
         {
+            // allow early cancellation
+            cancellationToken.ThrowIfCancellationRequested();
+
             var filePath = pair.FinalPath;
 
             try
@@ -122,25 +131,46 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 Total = 0
             };
             _downloadContext.TaskUploadProgress.Add(uploadProgress);
-            if (!(await _downloadContext.SaveChangesAsync() > 0))
+            if (!(await _downloadContext.SaveChangesAsync(cancellationToken) > 0))
             {
                 _logger.LogError("Failed to save initial upload progress for file {fileName}", uploadProgress.FileName);
                 return false;
             }
 
+            // Keep a registration so we can close the stream when cancellation is requested
+            CancellationTokenRegistration? streamCloseReg = null;
+
             try
             {
                 using var fileStream = File.OpenRead(filePath);
+
+                // register a callback that attempts to close the stream when cancellation is requested
+                streamCloseReg = cancellationToken.Register(() =>
+                {
+                    try
+                    {
+                        fileStream.Dispose();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Exception while disposing file stream during cancellation for task {TaskId}", task.Id);
+                    }
+                });
+
                 var fileLength = fileStream.Length;
                 uploadProgress.Total = fileLength;
                 task.State = TorrentTaskState.InUploaderAndUploadingStarted;
-                await _downloadContext.SaveChangesAsync();
+                await _downloadContext.SaveChangesAsync(cancellationToken);
 
                 long lastSaved = 0;
-                long saveIntervalBytes = fileLength / 20;
+                long saveIntervalBytes = Math.Max(1, fileLength / 20);
 
                 var progressStream = new ProgressStream(fileStream, (read, total) =>
                 {
+                    // This callback runs on IO path — check cancellation and abort by throwing
+                    if (cancellationToken.IsCancellationRequested)
+                        throw new OperationCanceledException(cancellationToken);
+
                     uploadProgress.Read = read;
                     uploadProgress.Progress = (int)(100.0 * read / total);
 
@@ -151,6 +181,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                         lastSaved = read;
                         try
                         {
+                            // keep original synchronous behavior to avoid changing surrounding logic
                             _downloadContext.TaskUploadProgress.Update(uploadProgress);
                             _downloadContext.SaveChanges();
                         }
@@ -161,27 +192,60 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                     }
                 });
 
+                // create input for Telegram upload
                 var inputFile = Telegram.Bot.Types.InputFile.FromStream(progressStream, Path.GetFileName(filePath));
+
+                // perform upload — if cancellation happens, stream disposal or exception from callback should abort it
                 var uploadResult = await _botClient.SendDocument(
                     chatId: _settings.ChannelFileChatID,
                     document: inputFile,
                     caption: GenerateCaption(task, Path.GetFileName(filePath))
                 );
 
-                return await StoreDocumentInDatabase(uploadResult, task, pair);
+                // store document in DB (pass cancellation token)
+                return await StoreDocumentInDatabase(uploadResult, task, pair, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                _logger.LogInformation("Upload was cancelled for file {filePath} in task {taskId}.", filePath, task.Id);
+                // mark as cancelled / keep consistent with other flows
+                try
+                {
+                    var t = await _downloadContext.TorrentTasks.FindAsync(new object[] { task.Id }, CancellationToken.None);
+                    if (t != null)
+                    {
+                        t.State = TorrentTaskState.Cancelled;
+                        t.ErrorMessage = "Upload cancelled by user.";
+                        await _downloadContext.SaveChangesAsync(CancellationToken.None);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to persist cancellation state for task {TaskId}", task.Id);
+                }
+
+                return false;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Upload failed for file {filePath} in task {taskId}.", filePath, task.Id);
                 task.State = TorrentTaskState.Error;
                 task.ErrorMessage = $"Upload failed for {Path.GetFileName(filePath)}: {ex.Message}";
-                await _downloadContext.SaveChangesAsync();
+                await _downloadContext.SaveChangesAsync(cancellationToken);
                 return false;
+            }
+            finally
+            {
+                // dispose registration if created
+                streamCloseReg?.Dispose();
             }
         }
 
-        private async Task<bool> StoreDocumentInDatabase(Message message, TorrentTask task, SubtitleVideoPair pair)
+        private async Task<bool> StoreDocumentInDatabase(Message message, TorrentTask task, SubtitleVideoPair pair, CancellationToken cancellationToken)
         {
+            // respect cancellation
+            cancellationToken.ThrowIfCancellationRequested();
+
             var fileName = message.Document?.FileName ?? message.Video?.FileName;
             if (string.IsNullOrEmpty(fileName))
             {
@@ -210,7 +274,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             var omdbItem = await _dataContext.OmdbItems
                 .Include(i => i.Seasons)
                 .ThenInclude(s => s.Episodes)
-                .FirstOrDefaultAsync(x => x.ImdbId == task.ImdbId);
+                .FirstOrDefaultAsync(x => x.ImdbId == task.ImdbId, cancellationToken);
 
             if (omdbItem == null)
             {
@@ -266,7 +330,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             }
 
             _dataContext.Documents.Add(document);
-            var res = await _dataContext.SaveChangesAsync() > 0;
+            var res = await _dataContext.SaveChangesAsync(cancellationToken) > 0;
 
             if (res)
             {

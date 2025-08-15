@@ -26,9 +26,13 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             _settings = settings.Value;
         }
 
-        public async Task<bool> ExecuteAsync(Guid taskId)
+        public async Task<bool> ExecuteAsync(Guid taskId, CancellationToken cancellationToken = default)
         {
-            var task = await _context.TorrentTasks.FirstOrDefaultAsync(x => x.Id == taskId);
+            // Respect cancellation at the entry point
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var task = await _context.TorrentTasks
+                .FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
             if (task == null)
             {
                 return false;
@@ -36,34 +40,49 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
             try
             {
-                await StartDownload(task);
-                await _context.SaveChangesAsync();
+                await StartDownload(task, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // cancellation requested — bail out gracefully
+                return false;
             }
             catch (Exception ex)
             {
                 task.ErrorMessage = $"Error starting task in Qbit: {ex.Message}";
                 task.State = TorrentTaskState.Error;
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
                 return false;
             }
 
             try
             {
-                await UpdateProgress(task);
+                var result = await UpdateProgress(task, cancellationToken);
+                if (result)
+                {
+                    return true;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // cancellation requested during progress loop
+                return false;
             }
             catch (Exception ex)
             {
                 task.ErrorMessage = $"Error during progress update: {ex.Message}";
                 task.State = TorrentTaskState.Error;
-                await _context.SaveChangesAsync();
-                return false;
+                await _context.SaveChangesAsync(cancellationToken);
             }
 
-            return true;
+            return false;
         }
 
-        private async Task StartDownload(TorrentTask task)
+        private async Task StartDownload(TorrentTask task, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             if (string.IsNullOrEmpty(task.Magnet))
             {
                 throw new Exception($"Magnet is empty for task {task.Id}");
@@ -78,7 +97,11 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             task.TorrentHash = torrentHash;
             task.UpdatedAt = DateTime.UtcNow;
 
+            // call to qbit client (assumed non-cancellable); check token before/after
+            cancellationToken.ThrowIfCancellationRequested();
             var isAdded = await _qbitClient.AddTorrentAsync(task.Magnet);
+            cancellationToken.ThrowIfCancellationRequested();
+
             task.DownloadStartTime = DateTime.UtcNow;
 
             if (!isAdded)
@@ -89,10 +112,12 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             task.State = TorrentTaskState.InQbitButDownloadNotStarted;
         }
 
-        private async Task UpdateProgress(TorrentTask task)
+        private async Task<bool> UpdateProgress(TorrentTask task, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var progress = await _context.TaskDownloadProgress
-                .FirstOrDefaultAsync(x => x.TorrentTaskId == task.Id);
+                .FirstOrDefaultAsync(x => x.TorrentTaskId == task.Id, cancellationToken);
 
             if (progress == null)
             {
@@ -104,17 +129,23 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                     Speed = 0,
                     TorrentTaskId = task.Id
                 };
-                await _context.TaskDownloadProgress.AddAsync(progress);
-                await _context.SaveChangesAsync();
+                await _context.TaskDownloadProgress.AddAsync(progress, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
             }
 
             task = await _context.TorrentTasks
                 .Include(x => x.TaskDownloadProgress)
-                .FirstOrDefaultAsync(x => x.Id == task.Id);
+                .FirstOrDefaultAsync(x => x.Id == task.Id, cancellationToken);
 
+            // Polling loop — respect cancellation and use cancellable delay
             while (true)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                // fetch latest torrent info from qbit (non-cancellable call assumed)
                 var latest = await _qbitClient.GetQbitTorrentByHashAsync(task.TorrentHash);
+
+                // apply latest values
                 task.TaskDownloadProgress.Progress = (decimal)latest.Progress;
                 task.TaskDownloadProgress.Size = latest.Size;
                 task.TaskDownloadProgress.Speed = latest.DownloadSpeed;
@@ -125,27 +156,30 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                     task.State = TorrentTaskState.TorrentWasDownloaded;
                     task.DownloadEndTime = DateTime.UtcNow;
                     task.FileSavingPath = latest.ContentPath;
-                    await _context.SaveChangesAsync();
-                    break;
+                    await _context.SaveChangesAsync(cancellationToken);
+                    return true;
                 }
 
                 if (IsDownloadOpportunityOver(task))
                 {
                     task.State = TorrentTaskState.TorrentTimedOut;
-                    await _context.SaveChangesAsync();
-                    break;
+                    task.ErrorMessage = "Download timed out And Failed to download in time windows.";
+                    await _context.SaveChangesAsync(cancellationToken);
+                    return false;
                 }
 
                 if (IsDownloadFailedToGetMetaData(task, latest))
                 {
                     task.State = TorrentTaskState.Error;
                     task.ErrorMessage = "Failed to get metadata in time.";
-                    await _context.SaveChangesAsync();
-                    break;
+                    await _context.SaveChangesAsync(cancellationToken);
+                    return false;
                 }
 
-                await _context.SaveChangesAsync();
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await _context.SaveChangesAsync(cancellationToken);
+
+                // cancellable delay
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
             }
         }
 

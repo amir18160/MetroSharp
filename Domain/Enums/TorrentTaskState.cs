@@ -10,7 +10,7 @@ namespace Domain.Enums
         TorrentTimedOut,
         InQbitAndDownloadStarted,
         TorrentWasDownloaded,
-        InDownloadingSubtitle,
+        InExtractingSubtitle,
         InParingSubtitlesWithVideo,
         InFfmpegButProcessNotStarted,
         InFfmpegAndProcessStarted,

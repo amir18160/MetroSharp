@@ -22,9 +22,13 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             _context = context;
         }
 
-        public async Task<bool> Pair(Guid taskId)
+        public async Task<bool> Pair(Guid taskId, CancellationToken cancellationToken = default)
         {
-            var task = await _context.TorrentTasks.FirstOrDefaultAsync(x => x.Id == taskId);
+            // early cancellation
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var task = await _context.TorrentTasks
+                .FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
 
             if (task == null)
             {
@@ -37,29 +41,33 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 return false;
             }
 
-            var pairedResult = await GeminiPair(task);
+            // perform pairing (may throw OperationCanceledException)
+            var pairedResult = await GeminiPair(task, cancellationToken);
+
+            // respect cancellation after pairing
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (pairedResult.Count == 0)
             {
-                var message = "Failed to pair any video with matching subtitles.";
+                var message = "Failed to pair any video with matching subtitles because no pair created.";
                 _logger.LogError(message);
                 task.ErrorMessage = message;
                 task.UpdatedAt = DateTime.UtcNow;
                 task.State = TorrentTaskState.Error;
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
                 return false;
             }
 
             task.State = TorrentTaskState.InParingSubtitlesWithVideo;
             task.UpdatedAt = DateTime.UtcNow;
-            await _context.SubtitleVideoPairs.AddRangeAsync(pairedResult);
+            await _context.SubtitleVideoPairs.AddRangeAsync(pairedResult, cancellationToken);
 
-            var res = await _context.SaveChangesAsync() > 0;
+            var res = await _context.SaveChangesAsync(cancellationToken) > 0;
 
             if (!res)
             {
                 task.State = TorrentTaskState.Error;
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync(cancellationToken);
                 _logger.LogError("Failed to pair any video with matching subtitles.");
                 return false;
             }
@@ -67,14 +75,21 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             return true;
         }
 
-        private async Task<List<SubtitleVideoPair>> GeminiPair(TorrentTask task)
+        private async Task<List<SubtitleVideoPair>> GeminiPair(TorrentTask task, CancellationToken cancellationToken)
         {
+            // get files (synchronous) — check cancellation before and after to be responsive
+            cancellationToken.ThrowIfCancellationRequested();
             var Subtitles = GetSubtitles(task);
+            cancellationToken.ThrowIfCancellationRequested();
             var Videos = GetVideos(task);
+            cancellationToken.ThrowIfCancellationRequested();
 
             try
             {
+                // call external service
                 var rawResult = await _geminiService.GenerateContentAsync(AiPrompts.GeneratePairJson(Videos, Subtitles));
+
+                cancellationToken.ThrowIfCancellationRequested();
 
                 var cleanedJson = rawResult
                     .Trim()
@@ -84,6 +99,8 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
                 List<SubtitleVideoPair> pairs = JsonSerializer.Deserialize<List<SubtitleVideoPair>>(cleanedJson);
 
+                if (pairs == null) return new List<SubtitleVideoPair>();
+
                 foreach (var p in pairs)
                 {
                     p.Id = Guid.NewGuid();
@@ -92,6 +109,11 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 }
 
                 return pairs;
+            }
+            catch (OperationCanceledException)
+            {
+                // propagate so outer caller can handle cancellation
+                throw;
             }
             catch (Exception ex)
             {
@@ -103,7 +125,6 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
         private static List<string> GetSubtitles(TorrentTask task)
         {
             return FileScanner.GetFilesByExtensions(task.SubtitleSavingPath, ".srt", ".ass", ".sub", ".vtt");
-
         }
 
         private static List<string> GetVideos(TorrentTask task)

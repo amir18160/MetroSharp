@@ -27,6 +27,12 @@ namespace Infrastructure.BackgroundServices.TelegramBot
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            if (!_settings.IsEnabled)
+            {
+                _logger.LogInformation("Because of the settings Telegram bot is disabled.");
+                return;
+            }
+
             CreateLogger();
 
             var me = await _bot.GetMe();

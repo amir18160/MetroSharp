@@ -2,6 +2,8 @@ using Application.Core;
 using Application.Interfaces;
 using Domain.Enums;
 using Hangfire;
+using Hangfire.Common;
+using Hangfire.States;
 using MediatR;
 using Persistence;
 
@@ -32,11 +34,23 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 return Result<Unit>.Failure("Task is already completed, cancelled or in the process of cancelling.");
             }
 
+            // Mark as cancelling
             task.State = TorrentTaskState.Cancelling;
             await _context.SaveChangesAsync();
 
-            _backgroundJobClient.Enqueue<TaskCleaner>(cleaner => cleaner.CleanUpAsync(task.Id));
+            // Enqueue TaskCleaner into the dedicated "cleaners" queue with CancellationToken.None
+            try
+            {
+                var job = Job.FromExpression<TaskCleaner>(cleaner => cleaner.CleanUpAsync(task.Id, CancellationToken.None));
+                // Create the job in the "cleaners" queue so the cleaner-server will pick it up immediately.
+                _backgroundJobClient.Create(job, new EnqueuedState("cleaners"));
+            }
+            catch (Exception)
+            {
+                // best-effort: if enqueue fails, don't break cancellation flow — cleanup will still be attempted from running job finally.
+            }
 
+            // reflect user requested cancellation
             task.State = TorrentTaskState.Cancelled;
             await _context.SaveChangesAsync();
 

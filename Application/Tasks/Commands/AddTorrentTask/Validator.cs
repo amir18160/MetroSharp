@@ -16,15 +16,15 @@ namespace Application.Tasks.Commands.AddTorrentTask
                 .Must(s => s.StartsWith("magnet:"))
                 .WithMessage("A magnet must start with 'magnet:'");
 
-            RuleFor(x => x.SubtitleUrl)
-                .Must(s => s.StartsWith("http"))
-                .When(s => !string.IsNullOrWhiteSpace(s?.SubtitleUrl))
-                .WithMessage("SubtitleUrl must start with 'http' if provided.");
-
             RuleFor(x => x.ImdbId)
                 .NotEmpty()
                 .MinimumLength(3)
                 .MaximumLength(20);
+
+            RuleFor(x => x.SubtitleStoredPath)
+                .MinimumLength(3)
+                .MaximumLength(1000)
+                .When(x => string.IsNullOrWhiteSpace(x.SubtitleStoredPath));
 
             RuleFor(x => x.SeasonNumber)
                 .InclusiveBetween(1, 99)

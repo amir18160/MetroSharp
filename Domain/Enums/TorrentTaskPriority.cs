@@ -7,8 +7,8 @@ namespace Domain.Enums
 {
     public enum TorrentTaskPriority
     {
-        Low,
-        Medium,
-        High,
+        Low = 0,
+        Medium = 1,
+        High = 2,
     }
 }

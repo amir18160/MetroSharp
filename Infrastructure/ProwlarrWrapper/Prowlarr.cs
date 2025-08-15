@@ -80,8 +80,6 @@ namespace Infrastructure.ProwlarrWrapper
         {
             string query = "/api/v1/search?" + BuildSearchQuery(options);
 
-            System.Console.WriteLine(query);
-
             return await GetResponse<List<SearchResult>>(query);
         }
     }

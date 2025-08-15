@@ -20,16 +20,16 @@ namespace Infrastructure.Scrapers.Sites
             try
             {
                 document = await AngleSharpGetDocumentAsync(url);
+                return ParseSearchResults(document);
             }
             catch
             {
                 return [];
             }
 
-            return ParseSearchResults(document);
         }
 
-        public static async Task<List<SubF2mSubtitleDetail>> GetShowSubtitlesAsync(string url, string language = "", bool slugBased = false)
+        public static async Task<List<SubF2mSubtitleDetail>> GetSubtitlesAsync(string url, string language = "", bool slugBased = false)
         {
             var resolvedUrl = BuildSubtitlesUrl(url, language, slugBased);
 
@@ -48,17 +48,12 @@ namespace Infrastructure.Scrapers.Sites
 
         public static async Task<SubF2SubtitleDownload> GetDownloadLinkAsync(string url, string language = "", bool slugBased = false, string id = "")
         {
+
             var resolvedUrl = BuildDownloadUrl(url, language, slugBased, id);
 
             IDocument document;
-            try
-            {
-                document = await AngleSharpGetDocumentAsync(resolvedUrl);
-            }
-            catch
-            {
-                return null;
-            }
+           
+            document = await AngleSharpGetDocumentAsync(resolvedUrl);
 
             return ParseDownloadLink(document);
         }

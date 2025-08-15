@@ -35,6 +35,8 @@ using Infrastructure.ProwlarrWrapper.Models;
 using Infrastructure.ProwlarrWrapper;
 using Infrastructure.TMDbService.Models;
 using Infrastructure.TMDbService;
+using Infrastructure.FileStorageService.Models;
+using Infrastructure.FileStorageService;
 
 namespace API.Extensions
 {
@@ -64,9 +66,18 @@ namespace API.Extensions
 
             services.AddHangfireServer(options =>
             {
-                options.WorkerCount = 1;
+                options.WorkerCount = 1; 
+                options.Queues = ["default"]; 
+                options.ServerName = "main-hangfire-server";
             });
 
+            services.AddHangfireServer(options =>
+            {
+                options.WorkerCount = 1; 
+                options.Queues = ["cleaners"]; 
+                options.ServerName = "cleaner-hangfire-server";
+            });
+            
             services.AddTransient<TorrentTaskProcessor>();
             services.AddTransient<TaskCleaner>();
             services.AddHostedService<TaskPollingService>();
@@ -96,14 +107,13 @@ namespace API.Extensions
             services.AddScoped<ISystemInfoService, SystemInfoService>();
             services.AddScoped<IProwlarr, Prowlarr>();
             services.AddScoped<ITMDbService, TMDbService>();
-
+            services.AddScoped<IFileStorageService, FileStorageService>();
 
             services.AddHttpClient<IOmdbService, OMDbService>();
             services.AddHttpClient<ZipDownloader>();
 
             services.AddSingleton<IQbitClient, QbitClient>();
             services.AddTransient<IEmailService, EmailService>();
-
 
             services.Configure<SmtpSettings>(config.GetSection("SmtpSettings"));
             services.Configure<EmailSettings>(config.GetSection("EmailSettings"));
@@ -114,12 +124,12 @@ namespace API.Extensions
             services.Configure<TelegramBotSettings>(config.GetSection("TelegramBotSettings"));
             services.Configure<ProwlarrSettings>(config.GetSection("ProwlarrSettings"));
             services.Configure<TMDbSettings>(config.GetSection("TMDbSettings"));
-
+            services.Configure<FileStorageSettings>(config.GetSection("FileStorageSettings"));
 
             services.AddScoped<TorrentTaskStartConditionChecker>();
             services.AddScoped<CheckAndGenerateOMDbData>();
             services.AddScoped<StartTorrentTaskDownload>();
-            services.AddScoped<DownloadSubtitleForTorrent>();
+            services.AddScoped<ExtractSubtitleForTorrent>();
             services.AddScoped<PairSubtitleWithVideos>();
             services.AddScoped<SubtitleEditor>();
             services.AddScoped<FFmpegTaskProcessor>();

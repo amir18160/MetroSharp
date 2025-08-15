@@ -10,7 +10,7 @@ namespace API.Controllers
     public class IndexerController : BaseApiController
     {
         [HttpGet("get-indexers-list")]
-        public async Task<IActionResult> GetIndexers(Queries.GetIndexerProviders.Query query)
+        public async Task<IActionResult> GetIndexers([FromQuery] Queries.GetIndexerProviders.Query query)
         {
             var res = await Mediator.Send(query);
             return HandleResult(res);
