@@ -1,6 +1,5 @@
 using Domain.Enums;
 using Hangfire;
-using Infrastructure.BackgroundServices.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

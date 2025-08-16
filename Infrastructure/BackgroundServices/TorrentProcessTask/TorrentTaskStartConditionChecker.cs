@@ -1,5 +1,4 @@
 using Domain.Enums;
-using Infrastructure.BackgroundServices.Models;
 using Infrastructure.Utilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

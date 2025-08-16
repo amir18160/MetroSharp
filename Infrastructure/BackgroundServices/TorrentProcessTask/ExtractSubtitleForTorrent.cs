@@ -1,16 +1,10 @@
-// ExtractSubtitleForTorrent.cs
 using System.IO.Compression;
-using System.Threading;
-using System.Threading.Tasks;
 using Domain.Entities;
 using Domain.Enums;
-using Infrastructure.BackgroundServices.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Persistence;
-using System;
-using System.IO;
 
 namespace Infrastructure.BackgroundServices.TorrentProcessTask
 {

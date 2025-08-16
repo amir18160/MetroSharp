@@ -2,7 +2,6 @@ using Application.Interfaces;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Models.Qbit;
-using Infrastructure.BackgroundServices.Models;
 using Infrastructure.QbitTorrentClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;

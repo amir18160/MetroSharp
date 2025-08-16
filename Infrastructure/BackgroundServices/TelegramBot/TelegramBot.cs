@@ -1,6 +1,8 @@
 using System.Text;
-using Infrastructure.BackgroundServices.Models;
+using Infrastructure.BackgroundServices.TelegramBot.Configs;
+using Infrastructure.BackgroundServices.TelegramBot.Localization;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Telegram.Bot.Types.Enums;
@@ -14,12 +16,16 @@ namespace Infrastructure.BackgroundServices.TelegramBot
         private readonly TelegramBotSettings _settings;
         private readonly ILogger<TelegramBot> _logger;
         private readonly WTelegram.Bot _bot;
+        private readonly IStringLocalizer<BotMessages> _messages;
 
         public TelegramBot(
             IOptions<TelegramBotSettings> options,
             WTelegram.Bot bot,
-            ILogger<TelegramBot> logger)
+            ILogger<TelegramBot> logger,
+            IStringLocalizer<BotMessages> messages
+            )
         {
+            _messages = messages;
             _settings = options.Value;
             _logger = logger;
             _bot = bot;
@@ -50,7 +56,7 @@ namespace Infrastructure.BackgroundServices.TelegramBot
             if (text == "/start")
             {
 
-                await _bot.SendMessage(message.Chat, $"Hello, {message.From}!\nTry commands /pic /react /lastseen /getchat /setphoto", replyParameters: message);
+                await _bot.SendMessage(message.Chat, _messages["Welcome"].Value , replyParameters: message);
             }
         }
 

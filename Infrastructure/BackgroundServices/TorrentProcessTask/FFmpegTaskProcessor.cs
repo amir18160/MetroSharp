@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Domain.Entities;
 using Domain.Enums;
-using Infrastructure.BackgroundServices.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;

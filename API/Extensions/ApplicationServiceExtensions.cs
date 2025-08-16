@@ -13,7 +13,7 @@ using Application.Interfaces;
 
 using Persistence;
 
-using Infrastructure.BackgroundServices.Models;
+using Infrastructure.BackgroundServices.TelegramBot.Configs;
 using Infrastructure.BackgroundServices.TelegramBot;
 using Infrastructure.BackgroundServices.TorrentProcessTask;
 using Infrastructure.EmailService;
@@ -29,7 +29,7 @@ using Infrastructure.Scrapers;
 using Infrastructure.Security;
 using Infrastructure.Utilities;
 
-using Telegram.Bot.Polling;
+
 using Infrastructure.SystemInfo;
 using Infrastructure.ProwlarrWrapper.Models;
 using Infrastructure.ProwlarrWrapper;
@@ -82,6 +82,11 @@ namespace API.Extensions
             services.AddTransient<TaskCleaner>();
             services.AddHostedService<TaskPollingService>();
 
+            services.AddLocalization(options =>
+            {
+                options.ResourcesPath = "../../Infrastructure/BackgroundServices/TelegramBot/Resources";
+            });
+
             services.AddSingleton<WTelegram.Bot>(sp =>
             {
                 var settings = sp.GetRequiredService<IOptions<TelegramBotSettings>>().Value;
@@ -91,7 +96,6 @@ namespace API.Extensions
                 return new WTelegram.Bot(botToken, settings.AppId, settings.ApiHash, dbConnection);
             });
 
-            services.AddSingleton<IUpdateHandler, TelegramUpdateHandler>();
             services.AddHostedService<TelegramBot>();
 
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Application.Users.Commands.Update.Handler).Assembly));

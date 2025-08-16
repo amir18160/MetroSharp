@@ -1,4 +1,4 @@
-namespace Infrastructure.BackgroundServices.Models
+namespace Infrastructure.BackgroundServices.TelegramBot.Configs
 {
     public class TelegramBotSettings
     {

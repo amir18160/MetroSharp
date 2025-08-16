@@ -21,7 +21,9 @@ namespace Infrastructure.BackgroundServices
             var incompleteTasks = await downloadContext.TorrentTasks
                 .Where(t => t.State != TorrentTaskState.Completed &&
                             t.State != TorrentTaskState.Pending &&
-                            t.State != TorrentTaskState.Error)
+                            t.State != TorrentTaskState.Error &&
+                            t.State != TorrentTaskState.Cancelled
+                            )
                 .ToListAsync();
 
             if (!incompleteTasks.Any())

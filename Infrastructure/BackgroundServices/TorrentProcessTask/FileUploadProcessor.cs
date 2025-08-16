@@ -1,6 +1,6 @@
 using Domain.Entities;
 using Domain.Enums;
-using Infrastructure.BackgroundServices.Models;
+using Infrastructure.BackgroundServices.TelegramBot.Configs;
 using Infrastructure.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

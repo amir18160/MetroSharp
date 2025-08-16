@@ -1,6 +1,5 @@
 using Application.Interfaces;
 using Domain.Enums;
-using Infrastructure.BackgroundServices.Models;
 using Infrastructure.FileStorageService.Models;
 using Infrastructure.Scrapers.Core;
 using Infrastructure.Utilities;
