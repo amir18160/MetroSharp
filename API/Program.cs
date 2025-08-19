@@ -32,6 +32,8 @@ try
     builder.Services.AddApplicationServices(builder.Configuration);
     builder.Services.AddIdentityServices(builder.Configuration);
     builder.Services.AddCorsPolicy(CorsPolicy.AllowOrigins, builder.Configuration, builder.Environment);
+    builder.Services.AddLocalization(builder.Configuration);
+    builder.Services.AddTelegramService(builder.Configuration);
 
     var app = builder.Build();
 

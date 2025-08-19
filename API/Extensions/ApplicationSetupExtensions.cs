@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 using Persistence.Seeds;
+using Persistence.Seeds.OldMetroDbSeeder;
 
 namespace API.Extensions
 {
@@ -53,11 +54,20 @@ namespace API.Extensions
                         await SeedRoles.SeedUserRoles(services);
                     }
 
+                    /*
                     var shouldSeedData = !(await dataContext.Users.AnyAsync());
                     if (shouldSeedData)
                     {
                         logger.LogInformation("Seeding application data...");
                         await DataSeeder.SeedAsync(dataContext, userManager);
+                    }
+                    */
+
+                    var shouldSeedDataFromCSV = false;
+                    if (shouldSeedDataFromCSV)
+                    {
+                        logger.LogInformation("Seeding MetroCSV data...");
+                        await MetroCsvSeeder.SeedAsync(dataContext, userManager);
                     }
 
                     await TaskRecovery.RecoverInterruptedTasks(services);

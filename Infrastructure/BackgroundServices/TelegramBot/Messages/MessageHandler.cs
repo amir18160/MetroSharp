@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Infrastructure.BackgroundServices.TelegramBot.Localization
+namespace Infrastructure.BackgroundServices.TelegramBot.Messages
 {
-    public class BotMessages
+    public class MessageHandler
     {
         
     }

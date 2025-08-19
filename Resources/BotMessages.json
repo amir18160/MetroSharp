@@ -1,0 +1,27 @@
+{
+    "welcomeMessage": "Hello! How can I help you today?",
+    "farewellMessage": "Goodbye! Have a nice day.",
+    "errorMessages": {
+        "unknown": "an unknown error occured.",
+        "notImplemented": "this feature is not implemented."
+    },
+    "unSupportedCommand": "Command is not supported",
+    "latestMoviesMessage": "You can get latest Movies",
+    "aboutUs": "this is about us",
+    "searchTitles": "You can see how to search here",
+    "supportUs": "give us your money or your friendship",
+    "commands": {},
+    "callbackButtons": {
+        "search": "search"
+    },
+    "keyboardButtons": {
+        "aboutUs": "about us",
+        "supportUs": "support us",
+        "latestTitles": "latest titles",
+        "searchTitles": "search"
+    },
+    "inlineQueryMessages": {
+        "typeToSearch": "start typing to search",
+        "typeToSearchContent": "this is the content of clicking on type to search message"
+    }
+}

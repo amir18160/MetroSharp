@@ -37,6 +37,13 @@ using Infrastructure.TMDbService.Models;
 using Infrastructure.TMDbService;
 using Infrastructure.FileStorageService.Models;
 using Infrastructure.FileStorageService;
+using System.Text.Json;
+using Domain.Models.TelegramBot.Messages;
+using Infrastructure.BackgroundServices.TelegramBot.Command;
+using Infrastructure.BackgroundServices.TelegramBot.Keyboard;
+using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
+using Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
+
 
 namespace API.Extensions
 {
@@ -66,26 +73,22 @@ namespace API.Extensions
 
             services.AddHangfireServer(options =>
             {
-                options.WorkerCount = 1; 
-                options.Queues = ["default"]; 
+                options.WorkerCount = 1;
+                options.Queues = ["default"];
                 options.ServerName = "main-hangfire-server";
             });
 
             services.AddHangfireServer(options =>
             {
-                options.WorkerCount = 1; 
-                options.Queues = ["cleaners"]; 
+                options.WorkerCount = 1;
+                options.Queues = ["cleaners"];
                 options.ServerName = "cleaner-hangfire-server";
             });
-            
+
             services.AddTransient<TorrentTaskProcessor>();
             services.AddTransient<TaskCleaner>();
             services.AddHostedService<TaskPollingService>();
 
-            services.AddLocalization(options =>
-            {
-                options.ResourcesPath = "../../Infrastructure/BackgroundServices/TelegramBot/Resources";
-            });
 
             services.AddSingleton<WTelegram.Bot>(sp =>
             {
@@ -141,6 +144,7 @@ namespace API.Extensions
             services.AddScoped<TaskCleaner>();
             services.AddScoped<ITaskManager, TaskManager>();
 
+
             return services;
         }
 
@@ -173,6 +177,38 @@ namespace API.Extensions
                 });
             });
 
+            return services;
+        }
+
+        public static IServiceCollection AddLocalization(this IServiceCollection services, IConfiguration configuration)
+        {   
+            var BotMessagesJson = File.ReadAllText("../Resources/BotMessages.json");
+
+            var serializerOption = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            var botMessages = JsonSerializer.Deserialize<BotMessages>(BotMessagesJson, serializerOption);
+
+            services.AddSingleton(botMessages);
+
+            return services;
+        }
+        
+        public static IServiceCollection AddTelegramService(this IServiceCollection services, IConfiguration configuration)
+        {
+            
+            services.AddScoped<CommandHandler>();
+
+            services.AddScoped<KeyboardHandler>();
+            services.AddScoped<DefaultKeyboards>();
+
+            services.AddScoped<InlineQueryButtons>();
+            services.AddScoped<InlineQueryHandler>();
+            services.AddScoped<HandleSearchTitlesInline>();
+
+            services.AddScoped<CallbackQueryButtons>();
             return services;
         }
     }

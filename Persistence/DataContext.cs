@@ -50,6 +50,13 @@ namespace Persistence
                 .HasOne(ev => ev.User)
                 .WithMany(u => u.EmailVerifications)
                 .HasForeignKey(ev => ev.UserId);
+
+            // OMDb Item <-> Tag (one-to-many)
+            builder.Entity<OmdbItem>()
+              .HasMany(item => item.Tags)
+              .WithOne(tag => tag.OmdbItem)
+              .HasForeignKey(tag => tag.OmdbItemId);
+
         }
     }
 }
