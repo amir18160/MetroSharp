@@ -31,7 +31,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            await using var ctx = _contextFactory.CreateDbContext();
+            await using var ctx = await _contextFactory.CreateDbContextAsync(cancellationToken);
 
             var task = await ctx.TorrentTasks
                 .FirstOrDefaultAsync(t => t.Id == taskId, cancellationToken);

@@ -1,5 +1,7 @@
 using Domain.Enums;
+using Hangfire;
 using Infrastructure.Utilities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Persistence;
@@ -21,14 +23,14 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             _logger = logger;
             _settings = settings.Value;
         }
-
+        
         public async Task<bool> CheckAsync(Guid torrentTaskId, CancellationToken cancellationToken = default)
         {
             // Respect cancellation early
             cancellationToken.ThrowIfCancellationRequested();
 
             // Use FindAsync with cancellation token
-            var task = await _context.TorrentTasks.FindAsync(new object[] { torrentTaskId }, cancellationToken);
+            var task = await _context.TorrentTasks.FirstOrDefaultAsync(x=> x.Id == torrentTaskId , cancellationToken);
 
             if (task == null)
             {
@@ -39,6 +41,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
             if (task.State != TorrentTaskState.JobQueue)
             {
                 _logger.LogWarning("Task is not in the correct state to start. Task Id: {Id}", torrentTaskId);
+                _logger.LogWarning("This message might be because multiple worker running the same job"); 
                 return false;
             }
 

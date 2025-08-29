@@ -68,14 +68,20 @@ namespace API.Extensions
             {
                 options.UseSqlite(config.GetConnectionString("DownloadContext"));
             }, ServiceLifetime.Transient);
-
-            var ConnectionString = config.GetConnectionString("HangFireContext");
-
+            
+            var connectionString = config.GetConnectionString("HangFireContext");
+            
+            var hangfireDbPath = Path.Combine(AppContext.BaseDirectory, "hangfire.db");
+            if (File.Exists(hangfireDbPath))
+            {
+                File.Delete(hangfireDbPath);
+            }
+            
             services.AddHangfire(configuration => configuration
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
                 .UseSimpleAssemblyNameTypeSerializer()
                 .UseRecommendedSerializerSettings()
-                .UseSQLiteStorage(ConnectionString));
+                .UseSQLiteStorage(connectionString));
 
             services.AddHangfireServer(options =>
             {
@@ -91,8 +97,8 @@ namespace API.Extensions
                 options.ServerName = "cleaner-hangfire-server";
             });
 
-            services.AddTransient<TorrentTaskProcessor>();
-            services.AddTransient<TaskCleaner>();
+            services.AddScoped<TorrentTaskProcessor>();
+            services.AddScoped<TaskCleaner>();
             services.AddHostedService<TaskPollingService>();
 
 

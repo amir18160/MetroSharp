@@ -1,5 +1,6 @@
 using Domain.Enums;
 using Hangfire;
+using Hangfire.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -35,6 +36,10 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 return;
             }
 
+            _logger.LogInformation("Purge Hangfire database");
+            PurgeAllJobs();
+            _logger.LogInformation("Hangfire Database was purged successfully");
+
             _logger.LogInformation("Torrent Task Polling Service started.");
 
             while (!stoppingToken.IsCancellationRequested)
@@ -55,20 +60,24 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                         {
                             try
                             {
-                                _logger.LogInformation("adding task with id {id}", task.Id);
-                                _backgroundJobClient.Enqueue<TorrentTaskProcessor>(
-                                    p => p.ProcessTorrentTaskAsync(task.Id, stoppingToken)
-                                );
-
                                 task.State = TorrentTaskState.JobQueue;
+                                var result = await downloadContext.SaveChangesAsync(stoppingToken) > 0;
+                                if (!result)
+                                {
+                                    _logger.LogError("Torrent task with id {TaskId} failed to poll.", task.Id);
+                                    continue;
+                                }
+
+                                _logger.LogInformation($"Adding task with {task.Id} to poller.");
+                                _backgroundJobClient.Enqueue<TorrentTaskProcessor>(p =>
+                                    p.ProcessTorrentTaskAsync(task.Id, stoppingToken)
+                                );
                             }
                             catch (Exception ex)
                             {
                                 _logger.LogError(ex, "Failed to enqueue task {taskId}", task.Id);
                             }
                         }
-
-                        await downloadContext.SaveChangesAsync(stoppingToken);
                     }
                     catch (OperationCanceledException)
                     {
@@ -84,8 +93,42 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 {
                     await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken);
                 }
-                catch (TaskCanceledException) { }
+                catch (TaskCanceledException)
+                {
+                }
             }
+        }
+
+
+        public static void PurgeAllJobs()
+        {
+            using var connection = JobStorage.Current.GetConnection();
+            foreach (var recurringJob in connection.GetRecurringJobs())
+            {
+                RecurringJob.RemoveIfExists(recurringJob.Id);
+            }
+
+            var monitoring = JobStorage.Current.GetMonitoringApi();
+            foreach (var queue in monitoring.Queues())
+            {
+                var toDelete = monitoring.EnqueuedJobs(queue.Name, 0, (int)queue.Length);
+                foreach (var job in toDelete)
+                {
+                    BackgroundJob.Delete(job.Key);
+                }
+            }
+
+            foreach (var job in monitoring.ScheduledJobs(0, int.MaxValue))
+                BackgroundJob.Delete(job.Key);
+
+            foreach (var job in monitoring.ProcessingJobs(0, int.MaxValue))
+                BackgroundJob.Delete(job.Key);
+
+            foreach (var job in monitoring.SucceededJobs(0, int.MaxValue))
+                BackgroundJob.Delete(job.Key);
+
+            foreach (var job in monitoring.FailedJobs(0, int.MaxValue))
+                BackgroundJob.Delete(job.Key);
         }
     }
 }

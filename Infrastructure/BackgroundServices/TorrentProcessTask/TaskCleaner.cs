@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Application.Interfaces;
+using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Persistence;
@@ -24,12 +25,12 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
         {
             // Load the task (allow cancellation here, but proceed with best-effort if token already cancelled)
             var task = await _context.TorrentTasks
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
+        .AsNoTracking()
+        .FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
 
-            if (task == null)
+            if (task == null || task.State == TorrentTaskState.Cancelled)
             {
-                _logger.LogWarning("Task with ID {taskId} not found for cleanup.", taskId);
+                // Already cleaned up or doesn't exist
                 return;
             }
 

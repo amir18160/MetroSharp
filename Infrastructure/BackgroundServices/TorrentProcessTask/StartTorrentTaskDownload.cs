@@ -12,100 +12,92 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
     public class StartTorrentTaskDownload
     {
         private readonly IQbitClient _qbitClient;
-        private readonly IDbContextFactory<DownloadContext> _contextFactory;
+        private readonly DownloadContext _context;
         private readonly TorrentTaskSettings _settings;
 
         public StartTorrentTaskDownload(
             IQbitClient qbitClient,
-            IDbContextFactory<DownloadContext> contextFactory,
+            DownloadContext context,
             IOptions<TorrentTaskSettings> settings)
         {
+            _context = context;
             _qbitClient = qbitClient;
-            _contextFactory = contextFactory;
             _settings = settings.Value;
         }
-
+        
         public async Task<bool> ExecuteAsync(Guid taskId, CancellationToken cancellationToken = default)
         {
+            // Respect cancellation at the entry point
+            Console.WriteLine($"Download TTT With Id {taskId}");
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Load task once just to assert it exists (short-lived context)
-            await using (var ctx = _contextFactory.CreateDbContext())
+            var task = await _context.TorrentTasks
+                .FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
+            if (task == null)
             {
-                var exists = await ctx.TorrentTasks.AnyAsync(x => x.Id == taskId, cancellationToken);
-                if (!exists) return false;
-            }
-
-            try
-            {
-                var started = await StartDownload(taskId, cancellationToken);
-                if (!started) return false;
-            }
-            catch (OperationCanceledException)
-            {
-                return false;
-            }
-            catch (Exception ex)
-            {
-                // record error on task (use a fresh context)
-                await using var ctxErr = _contextFactory.CreateDbContext();
-                var t = await ctxErr.TorrentTasks.FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
-                if (t != null)
-                {
-                    t.ErrorMessage = $"Error starting task in Qbit: {ex.Message}";
-                    t.State = TorrentTaskState.Error;
-                    await ctxErr.SaveChangesAsync(CancellationToken.None); // best-effort
-                }
                 return false;
             }
 
             try
             {
-                var result = await UpdateProgress(taskId, cancellationToken);
-                return result;
+                await StartDownload(task, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
             }
             catch (OperationCanceledException)
             {
+                // cancellation requested — bail out gracefully
                 return false;
             }
             catch (Exception ex)
             {
-                await using var ctxErr = _contextFactory.CreateDbContext();
-                var t = await ctxErr.TorrentTasks.FirstOrDefaultAsync(x => x.Id == taskId);
-                if (t != null)
+                task.ErrorMessage = $"Error starting task in Qbit: {ex.Message}";
+                task.State = TorrentTaskState.Error;
+                await _context.SaveChangesAsync(cancellationToken);
+                return false;
+            }
+
+            try
+            {
+                var result = await UpdateProgress(task, cancellationToken);
+                if (result)
                 {
-                    t.ErrorMessage = $"Error during progress update: {ex.Message}";
-                    t.State = TorrentTaskState.Error;
-                    await ctxErr.SaveChangesAsync(CancellationToken.None);
+                    return true;
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                // cancellation requested during progress loop
+                return false;
+            }
+            catch (Exception ex)
+            {
+                task.ErrorMessage = $"Error during progress update: {ex.Message}";
+                task.State = TorrentTaskState.Error;
+                await _context.SaveChangesAsync(cancellationToken);
             }
 
             return false;
         }
 
-        private async Task<bool> StartDownload(Guid taskId, CancellationToken cancellationToken)
+        private async Task StartDownload(TorrentTask task, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // create a fresh context for atomic small updates
-            await using var context = _contextFactory.CreateDbContext();
-
-            var task = await context.TorrentTasks.FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
-            if (task == null) return false;
-
             if (string.IsNullOrEmpty(task.Magnet))
+            {
                 throw new Exception($"Magnet is empty for task {task.Id}");
+            }
 
             var torrentHash = TorrentUtilities.ExtractHashFromMagnet(task.Magnet);
             if (torrentHash == null)
+            {
                 throw new Exception($"Failed to extract hash from magnet for task {task.Id}");
+            }
 
             task.TorrentHash = torrentHash;
             task.UpdatedAt = DateTime.UtcNow;
 
-            // commit small change BEFORE calling external network
-            await context.SaveChangesAsync(cancellationToken);
-
+            // call to qbit client (assumed non-cancellable); check token before/after
             cancellationToken.ThrowIfCancellationRequested();
             var isAdded = await _qbitClient.AddTorrentAsync(task.Magnet);
             cancellationToken.ThrowIfCancellationRequested();
@@ -114,63 +106,43 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
             if (!isAdded)
             {
-                task.State = TorrentTaskState.Error;
-                task.ErrorMessage = $"Failed to add torrent to qBit for task {task.Id}";
-                await context.SaveChangesAsync(cancellationToken);
-                return false;
+                throw new Exception($"Failed to add torrent to qBit for task {task.Id}");
             }
 
             task.State = TorrentTaskState.InQbitButDownloadNotStarted;
-            await context.SaveChangesAsync(cancellationToken);
-
-            return true;
         }
 
-        private async Task<bool> UpdateProgress(Guid taskId, CancellationToken cancellationToken)
+        private async Task<bool> UpdateProgress(TorrentTask task, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            // Ensure a progress row exists: use short-lived context
-            await using (var ctx = _contextFactory.CreateDbContext())
-            {
-                var progress = await ctx.TaskDownloadProgress
-                    .FirstOrDefaultAsync(x => x.TorrentTaskId == taskId, cancellationToken);
+            var progress = await _context.TaskDownloadProgress
+                .FirstOrDefaultAsync(x => x.TorrentTaskId == task.Id, cancellationToken);
 
-                if (progress == null)
+            if (progress == null)
+            {
+                progress = new TaskDownloadProgress
                 {
-                    progress = new TaskDownloadProgress
-                    {
-                        Id = Guid.NewGuid(),
-                        Progress = 0,
-                        Size = 0,
-                        Speed = 0,
-                        TorrentTaskId = taskId
-                    };
-                    await ctx.TaskDownloadProgress.AddAsync(progress, cancellationToken);
-                    await ctx.SaveChangesAsync(cancellationToken);
-                }
+                    Id = Guid.NewGuid(),
+                    Progress = 0,
+                    Size = 0,
+                    Speed = 0,
+                    TorrentTaskId = task.Id
+                };
+                await _context.TaskDownloadProgress.AddAsync(progress, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
             }
 
-            // Polling loop — every iteration uses a fresh DbContext
+            task = await _context.TorrentTasks
+                .Include(x => x.TaskDownloadProgress)
+                .FirstOrDefaultAsync(x => x.Id == task.Id, cancellationToken);
+
+            // Polling loop — respect cancellation and use cancellable delay
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // Get latest from qbit (external call)
-                // You could also bail if torrent hash missing; reload it inside the loop below
-                // but for clarity we'll reload the entity each iteration.
-                await using var ctx = _contextFactory.CreateDbContext();
-
-                var task = await ctx.TorrentTasks
-                    .Include(x => x.TaskDownloadProgress)
-                    .FirstOrDefaultAsync(x => x.Id == taskId, cancellationToken);
-
-                if (task == null)
-                {
-                    return false; // task removed
-                }
-
-                // refresh latest info from qbit (non-cancellable assumed)
+                // fetch latest torrent info from qbit (non-cancellable call assumed)
                 var latest = await _qbitClient.GetQbitTorrentByHashAsync(task.TorrentHash);
 
                 // apply latest values
@@ -184,7 +156,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                     task.State = TorrentTaskState.TorrentWasDownloaded;
                     task.DownloadEndTime = DateTime.UtcNow;
                     task.FileSavingPath = latest.ContentPath;
-                    await ctx.SaveChangesAsync(cancellationToken);
+                    await _context.SaveChangesAsync(cancellationToken);
                     return true;
                 }
 
@@ -192,7 +164,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 {
                     task.State = TorrentTaskState.TorrentTimedOut;
                     task.ErrorMessage = "Download timed out And Failed to download in time windows.";
-                    await ctx.SaveChangesAsync(cancellationToken);
+                    await _context.SaveChangesAsync(cancellationToken);
                     return false;
                 }
 
@@ -200,12 +172,11 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 {
                     task.State = TorrentTaskState.Error;
                     task.ErrorMessage = "Failed to get metadata in time.";
-                    await ctx.SaveChangesAsync(cancellationToken);
+                    await _context.SaveChangesAsync(cancellationToken);
                     return false;
                 }
 
-                // regular update
-                await ctx.SaveChangesAsync(cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
 
                 // cancellable delay
                 await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
