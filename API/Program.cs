@@ -16,12 +16,13 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    builder.Host.UseSerilog((context, services, configuration) => {
+    builder.Host.UseSerilog((context, services, configuration) =>
+    {
         configuration
             .ReadFrom.Configuration(context.Configuration)
             .ReadFrom.Services(services)
             .Enrich.FromLogContext();
-        
+
         if (context.HostingEnvironment.IsDevelopment())
         {
             configuration.WriteTo.Console();
@@ -29,10 +30,11 @@ try
     });
 
     builder.Services.AddControllers();
+    builder.Services.AddSwagger();
     builder.Services.AddApplicationServices(builder.Configuration);
     builder.Services.AddIdentityServices(builder.Configuration);
     builder.Services.AddCorsPolicy(CorsPolicy.AllowOrigins, builder.Configuration, builder.Environment);
-    builder.Services.AddLocalization(builder.Configuration);
+    builder.Services.AddLocalization(builder.Configuration, builder.Environment);
     builder.Services.AddTelegramService(builder.Configuration);
 
     var app = builder.Build();
@@ -43,12 +45,18 @@ try
 
     if (app.Environment.IsDevelopment())
     {
+        app.UseHangfireDashboard();
         app.MapOpenApi();
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Metro API V1");
+            c.EnablePersistAuthorization();
+        });
     }
 
     app.UseCors(CorsPolicy.AllowOrigins);
 
-    app.UseHangfireDashboard();
 
     app.UseAuthentication();
     app.UseAuthorization();

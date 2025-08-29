@@ -43,6 +43,7 @@ using Infrastructure.BackgroundServices.TelegramBot.Command;
 using Infrastructure.BackgroundServices.TelegramBot.Keyboard;
 using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
+using Microsoft.OpenApi.Models;
 
 
 namespace API.Extensions
@@ -51,7 +52,7 @@ namespace API.Extensions
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration config)
         {
-            services.AddOpenApi();
+            services.AddOpenApi("internal");
 
             services.AddDbContext<DataContext>(opt =>
             {
@@ -63,7 +64,12 @@ namespace API.Extensions
                 opt.UseSqlite(config.GetConnectionString("DownloadContext"));
             });
 
-            var ConnectionString = config.GetConnectionString("DownloadContext");
+            services.AddDbContextFactory<DownloadContext>(options =>
+            {
+                options.UseSqlite(config.GetConnectionString("DownloadContext"));
+            }, ServiceLifetime.Transient);
+
+            var ConnectionString = config.GetConnectionString("HangFireContext");
 
             services.AddHangfire(configuration => configuration
                 .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
@@ -73,7 +79,7 @@ namespace API.Extensions
 
             services.AddHangfireServer(options =>
             {
-                options.WorkerCount = 1;
+                options.WorkerCount = 5;
                 options.Queues = ["default"];
                 options.ServerName = "main-hangfire-server";
             });
@@ -180,36 +186,81 @@ namespace API.Extensions
             return services;
         }
 
-        public static IServiceCollection AddLocalization(this IServiceCollection services, IConfiguration configuration)
-        {   
-            var BotMessagesJson = File.ReadAllText("../Resources/BotMessages.json");
+        public static IServiceCollection AddLocalization(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
+        {
+            var basePath = AppContext.BaseDirectory;
+            var path = Path.Combine(basePath, "BotMessages.json");
+            var botMessagesJson = File.ReadAllText(path);
 
             var serializerOption = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             };
 
-            var botMessages = JsonSerializer.Deserialize<BotMessages>(BotMessagesJson, serializerOption);
+            var botMessages = JsonSerializer.Deserialize<BotMessages>(botMessagesJson, serializerOption);
 
             services.AddSingleton(botMessages);
 
             return services;
         }
-        
+
         public static IServiceCollection AddTelegramService(this IServiceCollection services, IConfiguration configuration)
         {
-            
+
             services.AddScoped<CommandHandler>();
+            services.AddScoped<StartCommandHandler>();
 
             services.AddScoped<KeyboardHandler>();
             services.AddScoped<DefaultKeyboards>();
 
             services.AddScoped<InlineQueryButtons>();
             services.AddScoped<InlineQueryHandler>();
+            services.AddScoped<ChosenInlineHandler>();
+            services.AddScoped<HandleIMDbId>();
             services.AddScoped<HandleSearchTitlesInline>();
 
             services.AddScoped<CallbackQueryButtons>();
+            services.AddScoped<CallbackTitleListHandler>();
+            services.AddScoped<CallbackDownloadHandler>();
+            services.AddScoped<CallbackHandler>();
+
             return services;
         }
+
+        public static IServiceCollection AddSwagger(this IServiceCollection services)
+        {
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen(c =>
+            {
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "Enter your JWT token in this format: Bearer {your token}"
+                });
+
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                Array.Empty<string>()
+            }
+                });
+
+                c.CustomSchemaIds(type => type.FullName);
+            });
+            return services;
+        }
+
     }
 }

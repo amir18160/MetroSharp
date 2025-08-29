@@ -55,6 +55,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                         {
                             try
                             {
+                                _logger.LogInformation("adding task with id {id}", task.Id);
                                 _backgroundJobClient.Enqueue<TorrentTaskProcessor>(
                                     p => p.ProcessTorrentTaskAsync(task.Id, stoppingToken)
                                 );

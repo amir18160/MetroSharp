@@ -1,6 +1,7 @@
-using System.Runtime.CompilerServices;
 using Domain.Models.TelegramBot.Messages;
 using Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
+using Infrastructure.BackgroundServices.TelegramBot.Configs;
+using Microsoft.Extensions.Options;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
@@ -11,46 +12,38 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Keyboard
         private readonly BotMessages _messages;
         private readonly WTelegram.Bot _bot;
         private readonly CallbackQueryButtons _callbackQueryButtons;
-        public KeyboardHandler(BotMessages messages, WTelegram.Bot bot, CallbackQueryButtons callbackQueryButtons)
+        private readonly TelegramBotSettings _settings;
+        private readonly Dictionary<string, Func<Message, Task>> _keyboardActions;
+
+
+        public KeyboardHandler(
+            BotMessages messages,
+            WTelegram.Bot bot,
+            CallbackQueryButtons callbackQueryButtons,
+            IOptions<TelegramBotSettings> settings)
         {
-            _callbackQueryButtons = callbackQueryButtons;
-            _bot = bot;
             _messages = messages;
-        }
+            _bot = bot;
+            _callbackQueryButtons = callbackQueryButtons;
+            _settings = settings.Value;
 
-        public bool IsKeyboard(string message)
-        {
-            var keyboards = new List<string>()
+            _keyboardActions = new Dictionary<string, Func<Message, Task>>(StringComparer.OrdinalIgnoreCase)
             {
-                _messages.KeyboardButtons.SearchTitles,
-                _messages.KeyboardButtons.LatestTitles,
-                _messages.KeyboardButtons.AboutUs,
-                _messages.KeyboardButtons.SupportUs,
+                { _messages.KeyboardButtons.LatestTitles, HandleLatestTitlesAsync },
+                { _messages.KeyboardButtons.AboutUs, HandleAboutUsAsync },
+                { _messages.KeyboardButtons.SearchTitles, HandleSearchTitlesAsync },
+                { _messages.KeyboardButtons.SupportUs, HandleSupportUsAsync }
             };
-
-            return keyboards.Any(x => string.Equals(x, message, StringComparison.OrdinalIgnoreCase));
         }
 
+        public bool IsKeyboard(string message) =>
+            _keyboardActions.ContainsKey(message);
 
         public async Task HandleKeyboard(Message message)
         {
-            var text = message.Text;
-
-            if (text.Equals(_messages.KeyboardButtons.LatestTitles, StringComparison.CurrentCultureIgnoreCase))
+            if (_keyboardActions.TryGetValue(message.Text, out var action))
             {
-                await _bot.SendMessage(message.Chat.Id, _messages.LatestMoviesMessage);
-            }
-            else if (text.Equals(_messages.KeyboardButtons.AboutUs, StringComparison.CurrentCultureIgnoreCase))
-            {
-                await _bot.SendMessage(message.Chat.Id, _messages.AboutUs);
-            }
-            else if (text.Equals(_messages.KeyboardButtons.SearchTitles, StringComparison.CurrentCultureIgnoreCase))
-            {
-                await HandleSearchRequest(message);
-            }
-            else if (text.Equals(_messages.KeyboardButtons.SupportUs, StringComparison.CurrentCultureIgnoreCase))
-            {
-                await _bot.SendMessage(message.Chat.Id, _messages.SupportUs);
+                await action(message);
             }
             else
             {
@@ -58,12 +51,50 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Keyboard
             }
         }
 
-        private async Task HandleSearchRequest(Message message)
+        private async Task HandleLatestTitlesAsync(Message message)
         {
-            await _bot.SendMessage(message.Chat.Id, _messages.SearchTitles, replyMarkup: _callbackQueryButtons.GetSearchButtons()
-
-             );
+            var imagePath = Path.Combine(AppContext.BaseDirectory, "latest-movies.jpg");
+            await using var stream = File.OpenRead(imagePath);
+            var buttons = new InlineKeyboardMarkup(new[]
+            {
+                new[]
+                {
+                    new InlineKeyboardButton(_messages.CallbackButtons.RecommendedTitles)
+                    {
+                        CallbackData = CallbackDataSerializer.CreateRecommendedTitlesParams()
+                    },
+                    new InlineKeyboardButton(_messages.CallbackButtons.NewPopularTitles)
+                    {
+                        CallbackData = CallbackDataSerializer.CreateNewTitlesParams()
+                    }
+                }
+            });
+            await _bot.SendPhoto(message.Chat.Id, stream, _messages.LatestMoviesMessage, Telegram.Bot.Types.Enums.ParseMode.Html, replyMarkup: buttons);
         }
 
+        private async Task HandleAboutUsAsync(Message message)
+        {
+            await _bot.SendMessage(message.Chat.Id, _messages.AboutUs, parseMode: Telegram.Bot.Types.Enums.ParseMode.Html);
+        }
+
+        private async Task HandleSearchTitlesAsync(Message message)
+        {
+            var imagePath = Path.Combine(AppContext.BaseDirectory, "trending.jpg");
+            await using var stream = File.OpenRead(imagePath);
+            await _bot.SendPhoto(
+                message.Chat.Id,
+                stream,
+                _messages.SearchTitles,
+                Telegram.Bot.Types.Enums.ParseMode.Html,
+                replyMarkup: _callbackQueryButtons.GetSearchButtons());
+        }
+
+        private async Task HandleSupportUsAsync(Message message)
+        {
+            var messageToSend = _messages.SupportUs
+                .Replace("{{COFFEE_URL}}", _settings.BuyCoffeeURL)
+                .Replace("{{PAYMENT_URL}}", _settings.RaymitURL);
+            await _bot.SendMessage(message.Chat.Id, messageToSend, parseMode: Telegram.Bot.Types.Enums.ParseMode.Html);
+        }
     }
 }

@@ -95,13 +95,48 @@ namespace Infrastructure.QbitTorrentClient
 
         public async Task<bool> AddTorrentAsync(string pathOrMagnetOrTorrentUrl)
         {
-            var options = new AddTorrentUrlsRequest(new Uri(pathOrMagnetOrTorrentUrl))
-            {
-                CreateRootFolder = true,
-                DownloadFolder = _qbitTorrentSettings.DownloadFolder ?? null,
-            };
+            // base download folder from settings (can be null)
+            var baseDownload = _qbitTorrentSettings.DownloadFolder ?? string.Empty;
+            string targetDownloadFolder = baseDownload;
+
             try
             {
+                // If it's a magnet link, try to extract the display name (dn=) and use it
+                if (pathOrMagnetOrTorrentUrl.StartsWith("magnet:", StringComparison.OrdinalIgnoreCase))
+                {
+                    var dn = ExtractDisplayNameFromMagnet(pathOrMagnetOrTorrentUrl);
+                    if (!string.IsNullOrWhiteSpace(dn))
+                    {
+                        targetDownloadFolder = Path.Combine(baseDownload, dn);
+                        Directory.CreateDirectory(targetDownloadFolder);
+                    }
+                }
+                // If it's a local .torrent file or a URL ending with .torrent, use the filename (without extension)
+                else if (pathOrMagnetOrTorrentUrl.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))
+                {
+                    // try local file name first
+                    string fileName = Path.GetFileNameWithoutExtension(pathOrMagnetOrTorrentUrl);
+                    if (string.IsNullOrWhiteSpace(fileName) && Uri.TryCreate(pathOrMagnetOrTorrentUrl, UriKind.Absolute, out var u))
+                    {
+                        fileName = Path.GetFileNameWithoutExtension(u.AbsolutePath);
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(fileName))
+                    {
+                        targetDownloadFolder = Path.Combine(baseDownload, fileName);
+                        Directory.CreateDirectory(targetDownloadFolder);
+                    }
+                }
+
+                // Build request - explicitly set DownloadFolder to the folder we've created.
+                var options = new AddTorrentUrlsRequest(new Uri(pathOrMagnetOrTorrentUrl))
+                {
+                    // keep CreateRootFolder true/false as you prefer; for single-file torrents qBittorrent
+                    // may still ignore it, so using DownloadFolder is the reliable approach.
+                    CreateRootFolder = true,
+                    DownloadFolder = string.IsNullOrWhiteSpace(targetDownloadFolder) ? null : targetDownloadFolder,
+                };
+
                 await Client.AddTorrentsAsync(options);
                 await UpdateTrackersOfTorrent(pathOrMagnetOrTorrentUrl);
                 return true;
@@ -112,6 +147,31 @@ namespace Infrastructure.QbitTorrentClient
                 return false;
             }
         }
+
+        static string ExtractDisplayNameFromMagnet(string magnet)
+        {
+            if (string.IsNullOrEmpty(magnet)) return null;
+
+            // magnet:?xt=...&dn=Some+Name&tr=...
+            var startIdx = magnet.IndexOf("dn=", StringComparison.OrdinalIgnoreCase);
+            if (startIdx < 0) return null;
+
+            startIdx += 3; // after 'dn='
+            var endIdx = magnet.IndexOf('&', startIdx);
+            var raw = endIdx >= 0 ? magnet.Substring(startIdx, endIdx - startIdx) : magnet.Substring(startIdx);
+
+            // replace + with space and URL-decode
+            try
+            {
+                raw = raw.Replace('+', ' ');
+                return Uri.UnescapeDataString(raw);
+            }
+            catch
+            {
+                return raw; // last resort
+            }
+        }
+
 
         public async Task<bool> DeleteTorrentAsync(string hash, bool deleteFiles = true)
         {

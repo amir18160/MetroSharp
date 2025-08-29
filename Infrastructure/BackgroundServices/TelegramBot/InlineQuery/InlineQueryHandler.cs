@@ -8,6 +8,7 @@ namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
         private readonly BotMessages _messages;
         private readonly WTelegram.Bot _bot;
         private readonly HandleSearchTitlesInline _handleSearchTitles;
+        private readonly string DefaultImageURL = "https://images.unsplash.com/photo-1440404653325-ab127d49abc1";
         public InlineQueryHandler(BotMessages messages, WTelegram.Bot bot, HandleSearchTitlesInline handleSearchTitles)
         {
             _handleSearchTitles = handleSearchTitles;
@@ -30,7 +31,10 @@ namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
         {
             var defaultResponse = new List<InlineQueryResult>()
             {
-                new InlineQueryResultArticle("default_result", _messages.InlineQueryMessages.TypeToSearch, new InputTextMessageContent(_messages.InlineQueryMessages.TypeToSearchContent) )
+                new InlineQueryResultArticle("default_result", _messages.InlineQueryMessages.TypeToSearch, new InputTextMessageContent(_messages.InlineQueryMessages.TypeToSearchContent))
+                {
+                    ThumbnailUrl = DefaultImageURL
+                }
             };
 
             await _bot.AnswerInlineQuery(inlineQuery.query_id.ToString(), defaultResponse);       

@@ -1,9 +1,12 @@
 using System.Text;
+using System.Text.Json;
 using Domain.Models.TelegramBot.Messages;
+using Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
 using Infrastructure.BackgroundServices.TelegramBot.Command;
 using Infrastructure.BackgroundServices.TelegramBot.Configs;
 using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.BackgroundServices.TelegramBot.Keyboard;
+using Json.More;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -66,6 +69,7 @@ namespace Infrastructure.BackgroundServices.TelegramBot
             using var scope = _scopeFactory.CreateScope();
             var commandHandler = scope.ServiceProvider.GetRequiredService<CommandHandler>();
             var keyboardHandler = scope.ServiceProvider.GetRequiredService<KeyboardHandler>();
+            var chosenInlineHandler = scope.ServiceProvider.GetRequiredService<ChosenInlineHandler>();
 
             if (CommandHandler.IsCommand(text))
             {
@@ -79,12 +83,18 @@ namespace Infrastructure.BackgroundServices.TelegramBot
                 return;
             }
 
+            if (ChosenInlineHandler.IsChosenInline(message))
+            {
+                await chosenInlineHandler.Handle(message);
+            }
+
         }
 
         public async Task OnUpdate(WTelegram.Types.Update update)
         {
             using var scope = _scopeFactory.CreateScope();
             var inlineQueryHandler = scope.ServiceProvider.GetRequiredService<InlineQueryHandler>();
+            var callbackHandler = scope.ServiceProvider.GetRequiredService<CallbackHandler>();
 
             if (update.Type == UpdateType.Unknown)
             {
@@ -92,8 +102,17 @@ namespace Infrastructure.BackgroundServices.TelegramBot
                 {
                     _logger.LogInformation("This is inline query {query}", updateInlineQuery.query);
                     await inlineQueryHandler.HandleInlineRequest(updateInlineQuery);
-                };
-            };
+                }
+                else if (update.TLUpdate is TL.UpdateBotCallbackQuery updateCallbackQuery)
+                {
+                    _logger.LogInformation("This is callback query data {data}: ", Encoding.UTF8.GetString(updateCallbackQuery.data));
+                    await callbackHandler.Handle(updateCallbackQuery);
+                }
+                else if (update.TLUpdate is TL.UpdateNewChannelMessage updateNewChannelMessage)
+                {
+                    _logger.LogInformation(JsonSerializer.Serialize(updateNewChannelMessage.message));
+                }
+            }
         }
     }
 }

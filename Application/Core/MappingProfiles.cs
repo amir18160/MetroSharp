@@ -1,4 +1,6 @@
+using Application.OMDb;
 using Application.Scrapers.Queries.GetLatestTorrents;
+using Application.Tags;
 using Application.Tasks.Queries.GetTasks;
 using AutoMapper;
 using Domain.Entities;
@@ -48,6 +50,22 @@ namespace Application.Core
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.User.Name))
                 .ForMember(dest => dest.FreeAt, opt => opt.MapFrom(src => src.FreeAt.HasValue ? src.FreeAt.ToString() : null));
+
+            CreateMap<Application.Tags.Commands.Create.Command, Tag>();
+
+            CreateMap<OmdbItem, OMDbSummaryDto>()
+                     .ForMember(d => d.ImdbId, opt => opt.MapFrom(s => s.ImdbId))
+                     .ForMember(d => d.Title, opt => opt.MapFrom(s => s.Title))
+                     .ForMember(d => d.Poster, opt => opt.MapFrom(s => s.Poster))
+                     .ForMember(d => d.ImdbRating, opt => opt.MapFrom(s => s.ImdbRating))
+                     .ForMember(d => d.ImdbVotes, opt => opt.MapFrom(s => s.ImdbVotes))
+                     .ForMember(d => d.Type, opt => opt.MapFrom(s => s.Type))
+                     .ForMember(d => d.Year, opt => opt.MapFrom(s => s.Year));
+
+            // map Tag -> TagDto and map the navigation OmdbItem -> OmdbSummary
+            CreateMap<Tag, TagDto>()
+                // the Tag entity has property OmdbItem, but TagDto property is OmdbSummary
+                .ForMember(d => d.OmdbSummary, opt => opt.MapFrom(s => s.OmdbItem));
 
             CreateMap<Tasks.Commands.AddTorrentTask.Command, TorrentTask>();
 

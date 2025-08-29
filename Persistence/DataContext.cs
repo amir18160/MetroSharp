@@ -13,6 +13,7 @@ namespace Persistence
         public DbSet<OmdbItem> OmdbItems { get; set; }
         public DbSet<Episode> Episodes { get; set; }
         public DbSet<Season> Seasons { get; set; }
+        public DbSet<Tag> Tags { get; set; }
 
 
         /******* User Related *******/
@@ -20,6 +21,7 @@ namespace Persistence
         public DbSet<BannedUser> BannedUsers { get; set; }
         public DbSet<Plan> Plans { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

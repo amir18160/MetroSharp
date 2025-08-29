@@ -49,7 +49,7 @@ namespace Application.Tasks.Commands.CancelTask
                 return Result<Unit>.Failure("You are not authorized to cancel this task.");
             }
 
-            return await _taskManager.CancelTaskAsync(request.Id);
+            return await _taskManager.CancelTaskAsync(request.Id, cancellationToken);
         }
     }
 }

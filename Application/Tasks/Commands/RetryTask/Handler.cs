@@ -17,8 +17,10 @@ namespace Application.Tasks.Commands.RetryTask
         private readonly ILogger<Handler> _logger;
         private readonly UserManager<User> _userManager;
         private readonly IUserAccessor _userAccessor;
-        public Handler(DownloadContext downloadContext, ILogger<Handler> logger, IUserAccessor userAccessor, UserManager<User> userManager)
+        private readonly ITaskManager _taskManager;
+        public Handler(DownloadContext downloadContext, ILogger<Handler> logger, IUserAccessor userAccessor, UserManager<User> userManager, ITaskManager taskManager)
         {
+            _taskManager = taskManager;
             _userAccessor = userAccessor;
             _userManager = userManager;
             _logger = logger;
@@ -38,9 +40,6 @@ namespace Application.Tasks.Commands.RetryTask
             var targetRoles = await _userManager.GetRolesAsync(user);
 
             var task = await _downloadContext.TorrentTasks
-                .Include(x => x.TaskDownloadProgress)
-                .Include(x => x.SubtitleVideoPairs)
-                .Include(x => x.TaskUploadProgress)
                 .FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
 
             if (task == null)
@@ -54,43 +53,9 @@ namespace Application.Tasks.Commands.RetryTask
                 return Result<Unit>.Failure("You are not allowed to retry this task.");
             }
 
-            if (task.State != TorrentTaskState.Error && task.State != TorrentTaskState.Cancelled)
-            {
-                return Result<Unit>.Failure("Task is not in Error or Canceled state and cannot be retried.");
-            }
+            var result = await _taskManager.RetryTaskAsync(request.Id, cancellationToken);
 
-            if (task.TaskDownloadProgress != null)
-            {
-                _downloadContext.TaskDownloadProgress.Remove(task.TaskDownloadProgress);
-            }
-
-            if (task.TaskUploadProgress != null)
-            {
-                _downloadContext.TaskUploadProgress.RemoveRange(task.TaskUploadProgress);
-            }
-
-            if (task.SubtitleVideoPairs != null && task.SubtitleVideoPairs.Count != 0)
-            {
-                _downloadContext.SubtitleVideoPairs.RemoveRange(task.SubtitleVideoPairs);
-            }
-
-            task.State = TorrentTaskState.Pending;
-            task.ErrorMessage = null;
-            task.StartTime = null;
-            task.EndTime = null;
-            task.FileSavingPath = null;
-            task.SubtitleSavingPath = null;
-            task.UpdatedAt = DateTime.UtcNow;
-
-            var res = await _downloadContext.SaveChangesAsync(cancellationToken) > 0;
-
-            if (!res)
-            {
-                _logger.LogError("Failed to retry task {TaskId}", task.Id);
-                return Result<Unit>.Failure("Failed to retry the task.");
-            }
-
-            return Result<Unit>.Success(Unit.Value);
+            return result;
         }
     }
 }
