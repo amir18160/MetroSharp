@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Domain.Models.TelegramBot.Messages;
 using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.BackgroundServices.TelegramBot.Keyboard;
@@ -9,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Persistence;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Infrastructure.BackgroundServices.TelegramBot.Command
 {
@@ -19,18 +16,19 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Command
         private readonly HandleIMDbId _handleIMDbId;
         private readonly DataContext _context;
         private readonly DefaultKeyboards _keyboards;
-        public StartCommandHandler(WTelegram.Bot bot, BotMessages messages, HandleIMDbId handleIMDbId, DataContext context, DefaultKeyboards keyboards )
+
+        public StartCommandHandler(WTelegram.Bot bot, BotMessages messages, HandleIMDbId handleIMDbId,
+            DataContext context, DefaultKeyboards keyboards)
         {
             _keyboards = keyboards;
             _context = context;
             _handleIMDbId = handleIMDbId;
             _messages = messages;
             _bot = bot;
-
         }
-        
+
         public async Task HandleStartCommand(Message message, StartPayload payload)
-        {   
+        {
             if (payload != null && !string.IsNullOrEmpty(payload.ImdbId))
             {
                 if (!string.IsNullOrEmpty(payload.ImdbId))
@@ -42,16 +40,31 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Command
                         .FirstOrDefaultAsync(x => x.ImdbId == payload.ImdbId);
 
                     await _bot.SendMessage(message.From.Id, "🎬", ParseMode.Html, null, _keyboards.StartKeyboard);
-                    await _bot.SendMessage(message.From.Id, _handleIMDbId.GenerateMessage(omdbItem), ParseMode.Html, null, _handleIMDbId.GenerateMarkup(omdbItem));
+                    await _bot.SendMessage(message.From.Id, _handleIMDbId.GenerateMessage(omdbItem), ParseMode.Html,
+                        null, _handleIMDbId.GenerateMarkup(omdbItem));
                 }
+            }
+            else if (payload != null && payload.Support)
+            {
+                await _bot.SendMessage(
+                    message.Chat.Id,
+                    _messages.SupportUs,
+                    parseMode: ParseMode.Html,
+                    replyMarkup: _keyboards.StartKeyboard
+                );
             }
             else
             {
-                await _bot.SendMessage(message.Chat.Id,
+                var imagePath = Path.Combine(AppContext.BaseDirectory, "latest-movies.jpg");
+                await using var stream = File.OpenRead(imagePath);
+                
+                await _bot.SendPhoto(
+                    message.Chat.Id,
+                    stream,
                     _messages.WelcomeMessage,
-                    ParseMode.Html,
-                    null,
-                    _keyboards.StartKeyboard);
+                    parseMode: ParseMode.Html,
+                    replyMarkup: _keyboards.StartKeyboard
+                );
             }
         }
     }

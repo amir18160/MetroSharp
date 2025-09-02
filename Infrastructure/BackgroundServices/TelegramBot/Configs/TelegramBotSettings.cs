@@ -6,8 +6,10 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Configs
         public int AppId { get; set; }
         public string ApiHash { get; set; }
         public string BotToken { get; set; }
+        public string BotUsername { get; set; }
         public string DevelopmentBotToken { get; set; }
         public string TelegramContext { get; set; }
+        public long MainChannelID { get;    set; }
         public long ChannelFileChatID { get; set; }
         public long MaxAllowedUploadSize { get; set; }
         public string LogPath { get; set; }

@@ -1,6 +1,3 @@
-using Hangfire;
-using Hangfire.SQLite;
-
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -39,126 +36,122 @@ using Infrastructure.FileStorageService.Models;
 using Infrastructure.FileStorageService;
 using System.Text.Json;
 using Domain.Models.TelegramBot.Messages;
+using Infrastructure.BackgroundServices.DatabaseBackupService;
 using Infrastructure.BackgroundServices.TelegramBot.Command;
 using Infrastructure.BackgroundServices.TelegramBot.Keyboard;
 using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
+using Infrastructure.BackgroundServices.TelegramBot.Messages;
 using Microsoft.OpenApi.Models;
+using Quartz;
 
 
 namespace API.Extensions
 {
     public static class ApplicationServiceExtensions
     {
-        public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration config)
+     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration config)
+    {
+        services.AddOpenApi("internal");
+
+        services.AddDbContext<DataContext>(opt =>
         {
-            services.AddOpenApi("internal");
+            opt.UseSqlite(config.GetConnectionString("DataContext"));
+        });
 
-            services.AddDbContext<DataContext>(opt =>
+        services.AddDbContext<DownloadContext>(opt =>
+        {
+            opt.UseSqlite(config.GetConnectionString("DownloadContext"));
+        });
+
+        services.AddDbContextFactory<DownloadContext>(options =>
+        {
+            options.UseSqlite(config.GetConnectionString("DownloadContext"));
+        }, ServiceLifetime.Transient);
+
+        // ----------------- Quartz.NET configuration -----------------
+        services.AddQuartz(q =>
+        {
+            q.SchedulerName = "MainQuartzScheduler";
+            q.UseDefaultThreadPool(tp =>
             {
-                opt.UseSqlite(config.GetConnectionString("DataContext"));
+                tp.MaxConcurrency = 6;
             });
+        });
 
-            services.AddDbContext<DownloadContext>(opt =>
-            {
-                opt.UseSqlite(config.GetConnectionString("DownloadContext"));
-            });
+        // Start the Quartz hosted service and wait for jobs to complete on shutdown
+        services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
 
-            services.AddDbContextFactory<DownloadContext>(options =>
-            {
-                options.UseSqlite(config.GetConnectionString("DownloadContext"));
-            }, ServiceLifetime.Transient);
-            
-            var connectionString = config.GetConnectionString("HangFireContext");
-            
-            var hangfireDbPath = Path.Combine(AppContext.BaseDirectory, "hangfire.db");
-            if (File.Exists(hangfireDbPath))
-            {
-                File.Delete(hangfireDbPath);
-            }
-            
-            services.AddHangfire(configuration => configuration
-                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-                .UseSimpleAssemblyNameTypeSerializer()
-                .UseRecommendedSerializerSettings()
-                .UseSQLiteStorage(connectionString));
+        // Register job types so DI can create them
+        services.AddScoped<TorrentTaskJob>();
+        services.AddScoped<TaskCleanerJob>();
 
-            services.AddHangfireServer(options =>
-            {
-                options.WorkerCount = 5;
-                options.Queues = ["default"];
-                options.ServerName = "main-hangfire-server";
-            });
+        // ----------------- your existing services (unchanged) -----------------
+        services.AddScoped<TorrentTaskProcessor>();
+        services.AddScoped<TaskCleaner>();
+        services.AddHostedService<TaskPollingService>();
 
-            services.AddHangfireServer(options =>
-            {
-                options.WorkerCount = 1;
-                options.Queues = ["cleaners"];
-                options.ServerName = "cleaner-hangfire-server";
-            });
+        services.AddSingleton(sp =>
+        {
+            var settings = sp.GetRequiredService<IOptions<TelegramBotSettings>>().Value;
+            var isDevelopment = sp.GetRequiredService<IHostEnvironment>().IsDevelopment();
+            var dbConnection = new SqliteConnection(settings.TelegramContext);
+            var botToken = isDevelopment ? settings.DevelopmentBotToken : settings.BotToken;
+            return new WTelegram.Bot(botToken, settings.AppId, settings.ApiHash, dbConnection);
+        });
 
-            services.AddScoped<TorrentTaskProcessor>();
-            services.AddScoped<TaskCleaner>();
-            services.AddHostedService<TaskPollingService>();
+        services.AddHostedService<TelegramBot>();
+        
+        services.AddHostedService<BackupBackgroundService>();
+        services.AddScoped<BackupJob>();
+        
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Application.Users.Commands.Update.Handler).Assembly));
+        services.AddAutoMapper(typeof(MappingProfiles).Assembly, typeof(Infrastructure.Core.MappingProfiles).Assembly);
+        services.AddHttpContextAccessor();
+        services.AddFluentValidationAutoValidation();
+        services.AddValidatorsFromAssemblyContaining<Application.Users.Commands.Update.Validator>();
 
+        services.AddScoped<IUserAccessor, UserAccessor>();
+        services.AddScoped<IGeminiService, GeminiService>();
+        services.AddScoped<IScraperFacade, ScraperFacade>();
+        services.AddScoped<IUtilitiesFacade, UtilitiesFacade>();
+        services.AddScoped<ISystemInfoService, SystemInfoService>();
+        services.AddScoped<IProwlarr, Prowlarr>();
+        services.AddScoped<ITMDbService, TMDbService>();
+        services.AddScoped<IFileStorageService, FileStorageService>();
+        services.AddScoped<ITelegramManuelMessages, ManuelMessages>();
 
-            services.AddSingleton<WTelegram.Bot>(sp =>
-            {
-                var settings = sp.GetRequiredService<IOptions<TelegramBotSettings>>().Value;
-                var isDevelopment = sp.GetRequiredService<IHostEnvironment>().IsDevelopment();
-                var dbConnection = new SqliteConnection(settings.TelegramContext);
-                var botToken = isDevelopment ? settings.DevelopmentBotToken : settings.BotToken;
-                return new WTelegram.Bot(botToken, settings.AppId, settings.ApiHash, dbConnection);
-            });
+        services.AddHttpClient<IOmdbService, OMDbService>();
+        services.AddHttpClient<ZipDownloader>();
 
-            services.AddHostedService<TelegramBot>();
+        services.AddSingleton<IQbitClient, QbitClient>();
+        services.AddTransient<IEmailService, EmailService>();
 
-            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Application.Users.Commands.Update.Handler).Assembly));
-            services.AddAutoMapper(typeof(MappingProfiles).Assembly, typeof(Infrastructure.Core.MappingProfiles).Assembly);
-            services.AddHttpContextAccessor();
-            services.AddFluentValidationAutoValidation();
-            services.AddValidatorsFromAssemblyContaining<Application.Users.Commands.Update.Validator>();
+        services.Configure<SmtpSettings>(config.GetSection("SmtpSettings"));
+        services.Configure<EmailSettings>(config.GetSection("EmailSettings"));
+        services.Configure<OMDbSettings>(config.GetSection("OMDbSettings"));
+        services.Configure<GeminiSettings>(config.GetSection("GeminiSettings"));
+        services.Configure<QbitTorrentSettings>(config.GetSection("QbitTorrentSettings"));
+        services.Configure<TorrentTaskSettings>(config.GetSection("TorrentTaskSettings"));
+        services.Configure<TelegramBotSettings>(config.GetSection("TelegramBotSettings"));
+        services.Configure<ProwlarrSettings>(config.GetSection("ProwlarrSettings"));
+        services.Configure<TMDbSettings>(config.GetSection("TMDbSettings"));
+        services.Configure<FileStorageSettings>(config.GetSection("FileStorageSettings"));
+        services.Configure<BackupSettings>(config.GetSection("BackupSettings"));
 
-            services.AddScoped<IUserAccessor, UserAccessor>();
-            services.AddScoped<IGeminiService, GeminiService>();
-            services.AddScoped<IScraperFacade, ScraperFacade>();
-            services.AddScoped<IUtilitiesFacade, UtilitiesFacade>();
-            services.AddScoped<ISystemInfoService, SystemInfoService>();
-            services.AddScoped<IProwlarr, Prowlarr>();
-            services.AddScoped<ITMDbService, TMDbService>();
-            services.AddScoped<IFileStorageService, FileStorageService>();
+        services.AddScoped<TorrentTaskStartConditionChecker>();
+        services.AddScoped<CheckAndGenerateOMDbData>();
+        services.AddScoped<StartTorrentTaskDownload>();
+        services.AddScoped<ExtractSubtitleForTorrent>();
+        services.AddScoped<PairSubtitleWithVideos>();
+        services.AddScoped<SubtitleEditor>();
+        services.AddScoped<FFmpegTaskProcessor>();
+        services.AddScoped<FileUploadProcessor>();
+        services.AddScoped<TaskCleaner>();
+        services.AddScoped<ITaskManager, TaskManager>();
 
-            services.AddHttpClient<IOmdbService, OMDbService>();
-            services.AddHttpClient<ZipDownloader>();
-
-            services.AddSingleton<IQbitClient, QbitClient>();
-            services.AddTransient<IEmailService, EmailService>();
-
-            services.Configure<SmtpSettings>(config.GetSection("SmtpSettings"));
-            services.Configure<EmailSettings>(config.GetSection("EmailSettings"));
-            services.Configure<OMDbSettings>(config.GetSection("OMDbSettings"));
-            services.Configure<GeminiSettings>(config.GetSection("GeminiSettings"));
-            services.Configure<QbitTorrentSettings>(config.GetSection("QbitTorrentSettings"));
-            services.Configure<TorrentTaskSettings>(config.GetSection("TorrentTaskSettings"));
-            services.Configure<TelegramBotSettings>(config.GetSection("TelegramBotSettings"));
-            services.Configure<ProwlarrSettings>(config.GetSection("ProwlarrSettings"));
-            services.Configure<TMDbSettings>(config.GetSection("TMDbSettings"));
-            services.Configure<FileStorageSettings>(config.GetSection("FileStorageSettings"));
-
-            services.AddScoped<TorrentTaskStartConditionChecker>();
-            services.AddScoped<CheckAndGenerateOMDbData>();
-            services.AddScoped<StartTorrentTaskDownload>();
-            services.AddScoped<ExtractSubtitleForTorrent>();
-            services.AddScoped<PairSubtitleWithVideos>();
-            services.AddScoped<SubtitleEditor>();
-            services.AddScoped<FFmpegTaskProcessor>();
-            services.AddScoped<FileUploadProcessor>();
-            services.AddScoped<TaskCleaner>();
-            services.AddScoped<ITaskManager, TaskManager>();
-
-
-            return services;
-        }
+        return services;
+    }
 
         public static IServiceCollection AddCorsPolicy(
             this IServiceCollection services,

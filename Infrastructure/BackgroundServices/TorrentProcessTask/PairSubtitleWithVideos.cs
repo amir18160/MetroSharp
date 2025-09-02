@@ -129,7 +129,16 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
 
         private static List<string> GetVideos(TorrentTask task)
         {
-            return FileScanner.GetFilesByExtensions(task.FileSavingPath, ".mp4", ".mkv", ".avi", ".mov", ".flv");
+            var extensions = new string[]
+            {
+                ".mp4", ".mkv", ".avi", ".mov", ".flv"
+            };
+            if (File.Exists(task.FileSavingPath) &&
+                extensions.Contains(Path.GetExtension(task.FileSavingPath).ToLower()))
+            {
+                return [task.FileSavingPath];
+            }
+            return FileScanner.GetFilesByExtensions(task.FileSavingPath, extensions );
         }
 
     }

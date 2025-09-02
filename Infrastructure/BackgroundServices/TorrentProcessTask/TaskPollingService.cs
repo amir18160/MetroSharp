@@ -1,44 +1,55 @@
 using Domain.Enums;
-using Hangfire;
-using Hangfire.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Persistence;
+using Quartz;
+using Quartz.Impl.Matchers;
 
 namespace Infrastructure.BackgroundServices.TorrentProcessTask
 {
     public class TaskPollingService : BackgroundService
     {
         private readonly IServiceScopeFactory _scopeFactory;
-        private readonly IBackgroundJobClient _backgroundJobClient;
+        private readonly ISchedulerFactory _schedulerFactory;
         private readonly ILogger<TaskPollingService> _logger;
         private readonly TorrentTaskSettings _settings;
 
         public TaskPollingService(
             IServiceScopeFactory scopeFactory,
-            IBackgroundJobClient backgroundJobClient,
+            ISchedulerFactory schedulerFactory,
             ILogger<TaskPollingService> logger,
             IOptions<TorrentTaskSettings> settings)
         {
-            _settings = settings.Value;
             _scopeFactory = scopeFactory;
-            _backgroundJobClient = backgroundJobClient;
+            _schedulerFactory = schedulerFactory;
             _logger = logger;
+            _settings = settings.Value;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             if (!_settings.IsPollerEnabled)
             {
+                _logger.LogInformation("Torrent poller disabled by settings.");
                 return;
             }
 
-            _logger.LogInformation("Purge Hangfire database");
-            PurgeAllJobs();
-            _logger.LogInformation("Hangfire Database was purged successfully");
+            // Obtain scheduler instance lazily (avoid depending on IScheduler in ctor)
+            var scheduler = await _schedulerFactory.GetScheduler(stoppingToken);
+
+            _logger.LogInformation("Clearing Quartz scheduler jobs at startup (best-effort).");
+            try
+            {
+                await PurgeAllJobsAsync(scheduler, stoppingToken);
+                _logger.LogInformation("Quartz scheduler cleared.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to purge Quartz scheduler at startup.");
+            }
 
             _logger.LogInformation("Torrent Task Polling Service started.");
 
@@ -60,6 +71,9 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                         {
                             try
                             {
+                                // Respect cancellation
+                                stoppingToken.ThrowIfCancellationRequested();
+
                                 task.State = TorrentTaskState.JobQueue;
                                 var result = await downloadContext.SaveChangesAsync(stoppingToken) > 0;
                                 if (!result)
@@ -68,14 +82,30 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                                     continue;
                                 }
 
-                                _logger.LogInformation($"Adding task with {task.Id} to poller.");
-                                _backgroundJobClient.Enqueue<TorrentTaskProcessor>(p =>
-                                    p.ProcessTorrentTaskAsync(task.Id, stoppingToken)
-                                );
+                                _logger.LogInformation("Scheduling task with id {TaskId} on Quartz.", task.Id);
+
+                                var jobKey = new JobKey($"torrent-{task.Id}", "torrent-jobs");
+
+                                var jobDetail = JobBuilder.Create<TorrentTaskJob>()
+                                    .WithIdentity(jobKey)
+                                    .UsingJobData("torrentTaskId", task.Id.ToString())
+                                    .Build();
+
+                                var trigger = TriggerBuilder.Create()
+                                    .WithIdentity($"trigger-torrent-{task.Id}", "torrent-triggers")
+                                    .StartNow()
+                                    .Build();
+
+                                await scheduler.ScheduleJob(jobDetail, trigger, stoppingToken);
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                _logger.LogInformation("Task polling loop cancelled while scheduling tasks.");
+                                break;
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogError(ex, "Failed to enqueue task {taskId}", task.Id);
+                                _logger.LogError(ex, "Failed to schedule task {taskId}", task.Id);
                             }
                         }
                     }
@@ -95,40 +125,43 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 }
                 catch (TaskCanceledException)
                 {
+                    // graceful shutdown
                 }
             }
+
+            _logger.LogInformation("Torrent Task Polling Service stopped.");
         }
 
-
-        public static void PurgeAllJobs()
+        private static async Task PurgeAllJobsAsync(IScheduler scheduler, CancellationToken cancellationToken)
         {
-            using var connection = JobStorage.Current.GetConnection();
-            foreach (var recurringJob in connection.GetRecurringJobs())
-            {
-                RecurringJob.RemoveIfExists(recurringJob.Id);
-            }
+            if (scheduler == null) return;
 
-            var monitoring = JobStorage.Current.GetMonitoringApi();
-            foreach (var queue in monitoring.Queues())
+            var jobGroups = await scheduler.GetJobGroupNames(cancellationToken);
+            foreach (var group in jobGroups)
             {
-                var toDelete = monitoring.EnqueuedJobs(queue.Name, 0, (int)queue.Length);
-                foreach (var job in toDelete)
+                var keys = await scheduler.GetJobKeys(GroupMatcher<JobKey>.GroupEquals(group), cancellationToken);
+                if (keys != null && keys.Count > 0)
                 {
-                    BackgroundJob.Delete(job.Key);
+                    await scheduler.DeleteJobs(keys.ToList(), cancellationToken);
                 }
             }
 
-            foreach (var job in monitoring.ScheduledJobs(0, int.MaxValue))
-                BackgroundJob.Delete(job.Key);
-
-            foreach (var job in monitoring.ProcessingJobs(0, int.MaxValue))
-                BackgroundJob.Delete(job.Key);
-
-            foreach (var job in monitoring.SucceededJobs(0, int.MaxValue))
-                BackgroundJob.Delete(job.Key);
-
-            foreach (var job in monitoring.FailedJobs(0, int.MaxValue))
-                BackgroundJob.Delete(job.Key);
+            var triggerGroups = await scheduler.GetTriggerGroupNames(cancellationToken);
+            foreach (var tg in triggerGroups)
+            {
+                var triggers = await scheduler.GetTriggerKeys(GroupMatcher<TriggerKey>.GroupEquals(tg), cancellationToken);
+                foreach (var triggerKey in triggers)
+                {
+                    try
+                    {
+                        await scheduler.UnscheduleJob(triggerKey, cancellationToken);
+                    }
+                    catch
+                    {
+                        // best-effort
+                    }
+                }
+            }
         }
     }
 }

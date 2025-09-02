@@ -38,11 +38,14 @@ namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
                 return;
             }
 
-            await _bot.SendMessage(message.From.Id, GenerateMessage(omdbItem), Telegram.Bot.Types.Enums.ParseMode.Html, null, GenerateMarkup(omdbItem));
+            await _bot.SendMessage(message.From.Id, GenerateMessage(omdbItem), Telegram.Bot.Types.Enums.ParseMode.Html,
+                null, GenerateMarkup(omdbItem));
         }
 
-        public string GenerateMessage(OmdbItem item)
+        public string GenerateMessage(OmdbItem item, MessageGenerationOptions options = null)
         {
+            options ??= new MessageGenerationOptions(); // fallback to "show all"
+
             var sb = new StringBuilder();
             var imdbUrl = StringUtilities.GetIMDbURL(item.ImdbId);
             var typeLabel = item.Type == Domain.Enums.OmdbItemType.Movie
@@ -51,75 +54,145 @@ namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
 
             var titleTxt = $"{item.Title} {(item.Year.HasValue ? item.Year.ToString() : "")} · {typeLabel}".Trim();
 
-            // ===== Header (LTR) =====
-            sb.AppendLine("╔══════════════════════╗");
-            sb.AppendLine($"🎬 <a href=\"{MessageGeneratorHelper.E(imdbUrl)}\"><b>{MessageGeneratorHelper.E(titleTxt)}</b></a>");
-            sb.AppendLine("╚══════════════════════╝\n");
-
-            // ===== Ratings (LTR) =====
-            sb.AppendLine($"\u200F┓━━━📖 {_messages.InlineQuerySearchResponse.Scores.Score} ━━━━━━━");
-            string imdbVotes = item.ImdbVotes.HasValue ? $" ({item.ImdbVotes})" : "";
-            string ImdbRating = item.ImdbRating?.ToString("F1") + imdbVotes;
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "⭐", _messages.InlineQuerySearchResponse.Scores.Imdb, ImdbRating, false);
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🍅", _messages.InlineQuerySearchResponse.Scores.Rotten, item.RottenTomatoesScore?.ToString(), false);
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "📊", _messages.InlineQuerySearchResponse.Scores.Metascore, item.Metascore?.ToString(), false);
-            sb.AppendLine("\u200F┛━━━━━━━━━━━━━━━━━\n");
-
-            // ===== Meta (RTL) =====
-            sb.AppendLine($"\u200F┓━━━ℹ️ {_messages.InlineQuerySearchResponse.Information} ━━━━━━━━");
-
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🔞", _messages.InlineQuerySearchResponse.Rated, item.Rated, false);
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "📅", _messages.InlineQuerySearchResponse.Released, item.Released, false);
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "💰", _messages.InlineQuerySearchResponse.BoxOffice, item.BoxOffice, false);
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏷️", _messages.InlineQuerySearchResponse.Genres, MessageGeneratorHelper.JoinOrEmpty(item.Genres), false);
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎬", _messages.InlineQuerySearchResponse.Directors, MessageGeneratorHelper.JoinOrEmpty(item.Directors), false);
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "✍️", _messages.InlineQuerySearchResponse.Writers, MessageGeneratorHelper.JoinOrEmpty(item.Writers), false);
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎭", _messages.InlineQuerySearchResponse.Actors, MessageGeneratorHelper.JoinOrEmpty(item.Actors), false);
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "⏰", _messages.InlineQuerySearchResponse.Runtime, item.Runtime, false);
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🗣️", _messages.InlineQuerySearchResponse.Languages, MessageGeneratorHelper.JoinOrEmpty(item.Languages)?.Replace(",", ", "), false);
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🌍", _messages.InlineQuerySearchResponse.Countries, MessageGeneratorHelper.JoinOrEmpty(item.Countries), false);
-            if (MessageGeneratorHelper.HasValue(item.Awards))
+            // ===== Header =====
+            if (options.ShowHeader)
             {
-                MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏆", _messages.InlineQuerySearchResponse.Awards, item.Awards);
+                sb.AppendLine("╔══════════════════════╗");
+                sb.AppendLine(
+                    $"🎬 <a href=\"{MessageGeneratorHelper.E(imdbUrl)}\"><b>{MessageGeneratorHelper.E(titleTxt)}</b></a>");
+                sb.AppendLine("╚══════════════════════╝\n");
             }
 
-            sb.AppendLine("\u200F┛━━━━━━━━━━━━━━━━━\n");
-
-            // ===== Plot (RTL) =====
-            var plotRaw = StringUtilities.TruncateAtWord(item.PlotFa ?? item.Plot, 300) ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(plotRaw))
+            // ===== Ratings =====
+            if (options.ShowRatings)
             {
-                sb.AppendLine($"\u200F┓━━━📖 {_messages.InlineQuerySearchResponse.Plot} ━━━━━━━━");
-                sb.AppendLine($"\u200F<i>{MessageGeneratorHelper.E(plotRaw)}</i>");
+                sb.AppendLine($"\u200F┓━━━📖 {_messages.InlineQuerySearchResponse.Scores.Score} ━━━━━━━");
+                string imdbVotes = item.ImdbVotes.HasValue ? $" ({item.ImdbVotes})" : "";
+                string imdbRating = item.ImdbRating?.ToString("F1") + imdbVotes;
+
+                MessageGeneratorHelper.AppendIfNotEmpty(sb, "⭐", _messages.InlineQuerySearchResponse.Scores.Imdb,
+                    imdbRating, false);
+                MessageGeneratorHelper.AppendIfNotEmpty(sb, "🍅", _messages.InlineQuerySearchResponse.Scores.Rotten,
+                    item.RottenTomatoesScore?.ToString(), false);
+                MessageGeneratorHelper.AppendIfNotEmpty(sb, "📊", _messages.InlineQuerySearchResponse.Scores.Metascore,
+                    item.Metascore?.ToString(), false);
+
                 sb.AppendLine("\u200F┛━━━━━━━━━━━━━━━━━\n");
             }
 
-            // ===== Languages / Countries =====
-
-            // ===== Awards =====
-            if (MessageGeneratorHelper.HasValue(item.Awards))
+            // ===== Meta =====
+            if (options.ShowMeta)
             {
-                MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏆", _messages.InlineQuerySearchResponse.Awards, item.Awards);
+                sb.AppendLine($"\u200F┓━━━ℹ️ {_messages.InlineQuerySearchResponse.Information} ━━━━━━━━");
+
+                if (options.Meta.Rated)
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "🔞", _messages.InlineQuerySearchResponse.Rated,
+                        item.Rated, false);
+
+                if (options.Meta.Released)
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "📅", _messages.InlineQuerySearchResponse.Released,
+                        item.Released, false);
+
+                if (options.Meta.BoxOffice)
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "💰", _messages.InlineQuerySearchResponse.BoxOffice,
+                        item.BoxOffice, false);
+
+                if (options.Meta.Genres)
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏷️", _messages.InlineQuerySearchResponse.Genres,
+                        MessageGeneratorHelper.JoinOrEmpty(item.Genres), false);
+
+                if (options.Meta.Directors)
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎬", _messages.InlineQuerySearchResponse.Directors,
+                        MessageGeneratorHelper.JoinOrEmpty(item.Directors), false);
+
+                if (options.Meta.Writers)
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "✍️", _messages.InlineQuerySearchResponse.Writers,
+                        MessageGeneratorHelper.JoinOrEmpty(item.Writers), false);
+
+                if (options.Meta.Actors)
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎭", _messages.InlineQuerySearchResponse.Actors,
+                        MessageGeneratorHelper.JoinOrEmpty(item.Actors), false);
+
+                if (options.Meta.Runtime)
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "⏰", _messages.InlineQuerySearchResponse.Runtime,
+                        item.Runtime, false);
+
+                if (options.Meta.Languages)
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "🗣️", _messages.InlineQuerySearchResponse.Languages,
+                        MessageGeneratorHelper.JoinOrEmpty(item.Languages)?.Replace(",", ", "), false);
+
+                if (options.Meta.Countries)
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "🌍", _messages.InlineQuerySearchResponse.Countries,
+                        MessageGeneratorHelper.JoinOrEmpty(item.Countries), false);
+
+                if (options.Meta.Awards && MessageGeneratorHelper.HasValue(item.Awards))
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏆", _messages.InlineQuerySearchResponse.Awards,
+                        item.Awards);
+
+                sb.AppendLine("\u200F┛━━━━━━━━━━━━━━━━━\n");
             }
 
-            // ===== Footer (LTR) =====
-            sb.AppendLine("\n━━━━━━━━━━━━━━━━━━━━━━");
-            sb.AppendLine($"🔎 IMDb ID: <code>{MessageGeneratorHelper.E(item.ImdbId)}</code>");
-            sb.AppendLine($"🔗 {MessageGeneratorHelper.E(imdbUrl)}");
-            sb.AppendLine("📎 <i>Powered by MetroMoviez</i>");
+            // ===== Plot =====
+            if (options.ShowPlot)
+            {
+                var plotRaw = StringUtilities.TruncateAtWord(item.PlotFa ?? item.Plot, 300) ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(plotRaw))
+                {
+                    sb.AppendLine($"\u200F┓━━━📖 {_messages.InlineQuerySearchResponse.Plot} ━━━━━━━━");
+                    sb.AppendLine($"\u200F<i>{MessageGeneratorHelper.E(plotRaw)}</i>");
+                    sb.AppendLine("\u200F┛━━━━━━━━━━━━━━━━━\n");
+                }
+            }
+
+            // ===== Footer =====
+            if (options.ShowFooter)
+            {
+                sb.AppendLine("\n━━━━━━━━━━━━━━━━━━━━━━");
+                sb.AppendLine($"🔎 IMDb ID: <code>{MessageGeneratorHelper.E(item.ImdbId)}</code>");
+                sb.AppendLine($"🔗 {MessageGeneratorHelper.E(imdbUrl)}");
+                sb.AppendLine("📎 <i>Powered by MetroMoviez</i>");
+            }
 
             return sb.ToString().TrimEnd();
         }
+
+
+        public class MessageGenerationOptions
+        {
+            public bool ShowHeader { get; set; } = true;
+            public bool ShowRatings { get; set; } = true;
+            public bool ShowMeta { get; set; } = true;
+            public bool ShowPlot { get; set; } = true;
+            public bool ShowFooter { get; set; } = true;
+
+            public MetaOptions Meta { get; set; } = new();
+
+            public class MetaOptions
+            {
+                public bool Rated { get; set; } = true;
+                public bool Released { get; set; } = true;
+                public bool BoxOffice { get; set; } = true;
+                public bool Genres { get; set; } = true;
+                public bool Directors { get; set; } = true;
+                public bool Writers { get; set; } = true;
+                public bool Actors { get; set; } = true;
+                public bool Runtime { get; set; } = true;
+                public bool Languages { get; set; } = true;
+                public bool Countries { get; set; } = true;
+                public bool Awards { get; set; } = true;
+            }
+        }
+
 
         public InlineKeyboardMarkup GenerateMarkup(OmdbItem item)
         {
             var inlineKeyboard = new List<InlineKeyboardButton>()
             {
                 InlineKeyboardButton.WithSwitchInlineQuery(_messages.Common.Share, item.ImdbId),
-                InlineKeyboardButton.WithCallbackData(_messages.CallbackButtons.Download, CallbackDataSerializer.CreateDownloadFiles(item.ImdbId))
+                InlineKeyboardButton.WithCallbackData(_messages.CallbackButtons.Download,
+                    CallbackDataSerializer.CreateDownloadFiles(item.ImdbId))
             };
             return inlineKeyboard.ToArray();
         }
-
     }
 }

@@ -1,5 +1,5 @@
 {
-    "welcomeMessage": "Hello! How can I help you today?",
+    "welcomeMessage": "<b>سلام\uD83D\uDC4B، به مترو موویز خوش اومدید.</b>\n▪\uFE0F شما در اینجا میتونید اخرین فیلم های روز دنیا رو به صورت کاملا رایگان دریافت کنید \uD83C\uDFA5\uD83C\uDFAC.\n\nبرای استفاده از امکانات ربات  میتونید از منوی ربات گزینه مد نظر خودتون رو انتخاب کنید.\n@MetroMoviez\n@MetroMovieBot",
     "farewellMessage": "Goodbye! Have a nice day.",
     "errorMessages": {
         "unknown": "an unknown error occured.",

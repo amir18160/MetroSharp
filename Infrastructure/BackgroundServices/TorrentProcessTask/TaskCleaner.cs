@@ -98,7 +98,7 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 if (tracked != null)
                 {
                     // Set Cancelled state only if task isn't completed already
-                    if (tracked.State != Domain.Enums.TorrentTaskState.Completed)
+                    if (tracked.State is not (Domain.Enums.TorrentTaskState.Completed or Domain.Enums.TorrentTaskState.Error))
                     {
                         tracked.State = Domain.Enums.TorrentTaskState.Cancelled;
                         tracked.ErrorMessage ??= "Task cleaned up after cancellation/stop.";

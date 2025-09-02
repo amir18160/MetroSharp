@@ -1,9 +1,7 @@
 using System.Reflection;
 using System.Web;
 using Domain.Models.TelegramBot.Messages;
-using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.BackgroundServices.TelegramBot.Keyboard;
-using Telegram.Bot.Types.Enums;
 using WTelegram.Types;
 
 namespace Infrastructure.BackgroundServices.TelegramBot.Command
@@ -107,6 +105,6 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Command
     public class StartPayload
     {
         public string ImdbId { get; set; } = "";
-        public string Name { get; set; }
+        public bool Support { get; set; }
     }
 }

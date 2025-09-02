@@ -1,7 +1,6 @@
 using API.Extensions;
 using API.Middleware;
 using Domain.Core;
-using Hangfire;
 using Serilog;
 
 
@@ -45,7 +44,6 @@ try
 
     if (app.Environment.IsDevelopment())
     {
-        app.UseHangfireDashboard();
         app.MapOpenApi();
         app.UseSwagger();
         app.UseSwaggerUI(c =>
