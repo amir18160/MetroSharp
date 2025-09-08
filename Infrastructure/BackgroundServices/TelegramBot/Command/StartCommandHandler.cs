@@ -1,8 +1,11 @@
 using Domain.Models.TelegramBot.Messages;
+using Infrastructure.BackgroundServices.TelegramBot.Configs;
 using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.BackgroundServices.TelegramBot.Keyboard;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Persistence;
+using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -16,10 +19,12 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Command
         private readonly HandleIMDbId _handleIMDbId;
         private readonly DataContext _context;
         private readonly DefaultKeyboards _keyboards;
+        private readonly TelegramBotSettings _settings;
 
         public StartCommandHandler(WTelegram.Bot bot, BotMessages messages, HandleIMDbId handleIMDbId,
-            DataContext context, DefaultKeyboards keyboards)
+            DataContext context, DefaultKeyboards keyboards, IOptions<TelegramBotSettings> settings)
         {
+            _settings = settings.Value;
             _keyboards = keyboards;
             _context = context;
             _handleIMDbId = handleIMDbId;
@@ -44,20 +49,19 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Command
                         null, _handleIMDbId.GenerateMarkup(omdbItem));
                 }
             }
-            else if (payload != null && payload.Support)
+            else if (payload is { Support: true })
             {
-                await _bot.SendMessage(
-                    message.Chat.Id,
-                    _messages.SupportUs,
-                    parseMode: ParseMode.Html,
-                    replyMarkup: _keyboards.StartKeyboard
-                );
+                var messageToSend = _messages.SupportUs
+                    .Replace("{{COFFEE_URL}}", _settings.BuyCoffeeURL)
+                    .Replace("{{PAYMENT_URL}}", _settings.RaymitURL);
+                await _bot.SendMessage(message.Chat.Id, messageToSend,
+                    parseMode: Telegram.Bot.Types.Enums.ParseMode.Html);
             }
             else
             {
                 var imagePath = Path.Combine(AppContext.BaseDirectory, "latest-movies.jpg");
                 await using var stream = File.OpenRead(imagePath);
-                
+
                 await _bot.SendPhoto(
                     message.Chat.Id,
                     stream,

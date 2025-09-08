@@ -9,6 +9,8 @@ namespace Infrastructure.BackgroundServices.TelegramBot.CallbackQuery
         {
             Download,
             Document,
+            Season,
+            Episode,
             RecommendedTitles,
             NewTitles,
             Unknown
@@ -26,6 +28,10 @@ namespace Infrastructure.BackgroundServices.TelegramBot.CallbackQuery
                 return CallbackType.RecommendedTitles;
             if (callbackData.StartsWith("newt_"))
                 return CallbackType.NewTitles;
+            if (callbackData.StartsWith("season_"))
+                return CallbackType.Season;
+            if (callbackData.StartsWith("episode_"))
+                return CallbackType.Episode;
 
             return CallbackType.Unknown;
         }
@@ -37,6 +43,12 @@ namespace Infrastructure.BackgroundServices.TelegramBot.CallbackQuery
 
         public static string CreateGetDocumentParams(string documentId) => $"doc_{documentId}";
         public static string ParseDocumentFileParams(string callbackData) => ParseParams(callbackData, "doc_");
+
+        public static string CreateGetSeasonParams(string documentId) => $"season_{documentId}";
+        public static string ParseSeasonParams(string callbackData) => ParseParams(callbackData, "season_");
+
+        public static string CreateEpisodeParams(string documentId) => $"episode_{documentId}";
+        public static string ParseEpisodeParams(string callbackData) => ParseParams(callbackData, "episode_");
 
         /* no parse required */
         public static string CreateRecommendedTitlesParams() => $"rcmt_";

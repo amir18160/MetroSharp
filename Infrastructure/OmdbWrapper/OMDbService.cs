@@ -105,31 +105,32 @@ namespace Infrastructure.OmdbWrapper
 
             return new OmdbItem
             {
-                ImdbId = Sanitize(root.GetProperty("imdbID").GetString()) ?? string.Empty,
-                Title = Sanitize(root.GetProperty("Title").GetString()) ?? string.Empty,
-                Rated = Sanitize(root.GetProperty("Rated").GetString()) ?? string.Empty,
-                Released = Sanitize(root.GetProperty("Released").GetString()) ?? string.Empty,
-                Runtime = Sanitize(root.GetProperty("Runtime").GetString()) ?? string.Empty,
+                Id = Guid.NewGuid(),
+                ImdbId = Sanitize(root.GetProperty("imdbID").GetString()) ?? null,
+                Title = Sanitize(root.GetProperty("Title").GetString()) ?? null,
+                Rated = Sanitize(root.GetProperty("Rated").GetString()) ?? null,
+                Released = Sanitize(root.GetProperty("Released").GetString()) ?? null,
+                Runtime = Sanitize(root.GetProperty("Runtime").GetString()) ?? null,
                 Genres = ParseList(root.GetProperty("Genre").GetString()),
                 Directors = ParseList(root.GetProperty("Director").GetString()),
                 Writers = ParseList(root.GetProperty("Writer").GetString()),
                 Actors = ParseList(root.GetProperty("Actors").GetString()),
-                Plot = Sanitize(root.GetProperty("Plot").GetString()) ?? string.Empty,
-                PlotFa = string.Empty,
+                Plot = Sanitize(root.GetProperty("Plot").GetString()) ?? null,
+                PlotFa = null,
                 Languages = ParseList(root.GetProperty("Language").GetString()),
                 Countries = ParseList(root.GetProperty("Country").GetString()),
-                Awards = Sanitize(root.GetProperty("Awards").GetString()) ?? string.Empty,
-                Poster = Sanitize(root.GetProperty("Poster").GetString()) ?? string.Empty,
-                Metascore = int.TryParse(Sanitize(root.GetProperty("Metascore").GetString()), out var meta) ? meta : 0,
-                ImdbRating = double.TryParse(Sanitize(root.GetProperty("imdbRating").GetString()), out var rating) ? rating : 0,
-                ImdbVotes = double.TryParse(Sanitize(root.GetProperty("imdbVotes").GetString())?.Replace(",", ""), out var votes) ? votes : 0,
+                Awards = Sanitize(root.GetProperty("Awards").GetString()) ?? null,
+                Poster = Sanitize(root.GetProperty("Poster").GetString()) ?? null,
+                Metascore = int.TryParse(Sanitize(root.GetProperty("Metascore").GetString()), out var meta) ? meta : null,
+                ImdbRating = double.TryParse(Sanitize(root.GetProperty("imdbRating").GetString()), out var rating) ? rating : null,
+                ImdbVotes = double.TryParse(Sanitize(root.GetProperty("imdbVotes").GetString())?.Replace(",", ""), out var votes) ? votes : null,
                 BoxOffice = Sanitize(root.TryGetProperty("BoxOffice", out var boxProp) ? boxProp.GetString() : null) ?? string.Empty,
-                Year = int.TryParse(Sanitize(root.GetProperty("Year").GetString()), out var year) ? year : 0,
+                Year = int.TryParse(Sanitize(root.GetProperty("Year").GetString()), out var year) ? year : null,
                 Type = itemType,
                 TotalSeasons = int.TryParse(Sanitize(root.TryGetProperty("totalSeasons", out var seasonProp) ? seasonProp.GetString() : null), out var totalSeasons)
                     ? totalSeasons
                     : 0,
-                RottenTomatoesScore = rottenTomatoesScore
+                RottenTomatoesScore = rottenTomatoesScore > 0 ? rottenTomatoesScore: null
             };
         }
 

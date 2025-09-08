@@ -21,7 +21,7 @@ namespace Application.Telegram.Commands.SendMovieSeriesNotification
             RuleFor(x => x.ImdbId)
                 .NotEmpty()
                 .WithMessage("IMDb ID is required.")
-                .Matches(@"^tt\d{7,10}$")
+                .Matches(@"^tt\d{6,12}$")
                 .WithMessage("IMDb ID must be in a valid format (e.g., tt1234567).");
 
             RuleFor(x => x.NotificationType)
@@ -34,10 +34,6 @@ namespace Application.Telegram.Commands.SendMovieSeriesNotification
                 .WithMessage("Update details are required for UpdatedSeries notifications.")
                 .SetValidator(new UpdateDetailsValidator())
                 .When(x => x.NotificationType == MovieSeriesNotificationType.UpdatedSeries);
-
-            RuleFor(x => x.AdminNote)
-                .MaximumLength(500)
-                .WithMessage("Admin note cannot exceed 500 characters.");
         }
     }
 

@@ -55,8 +55,10 @@ namespace Application.Dashboard.Queries.GetStats
             result.TotalSuccessfulTasks = await _downloadContext.TorrentTasks
                 .Where(x=> x.State == TorrentTaskState.Completed)
                 .CountAsync(cancellationToken);
-                
-            
+            result.TotalSuccessfulTasksLast24Hours = await _downloadContext.TorrentTasks
+                .Where(x=> x.State == TorrentTaskState.Completed && x.CreatedAt > DateTime.UtcNow.AddHours(-24))
+                .CountAsync(cancellationToken);
+
             return Result<StatsDto>.Success(result);
         }
     }

@@ -253,15 +253,17 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
                 return false;
             }
 
+            var fileId = message.Document?.FileId ?? message.Video?.FileId;
+            var uniqueFileId = message.Document?.FileUniqueId ?? message.Video?.FileUniqueId;
             var document = new Document
             {
                 ChatId = _settings.ChannelFileChatID,
-                ChatName = message.Chat.Username,
+                ChatName = message.Chat.Title,
                 MimeType = message.Document?.MimeType ?? message.Video?.MimeType ?? "unknown",
                 FileName = fileName,
                 FileSize = message.Document?.FileSize ?? message.Video?.FileSize ?? -1,
-                FileId = message.Document?.FileId ?? message.Video?.FileId,
-                UniqueFileId = message.Document?.FileUniqueId ?? message.Video?.FileUniqueId,
+                FileId =$"WTelegramBot.{fileId}",
+                UniqueFileId = $"WTelegramBot.{uniqueFileId}",
                 MessageId = message.MessageId,
                 IsSubbed = pair.SubtitlesMerged,
                 CreatedAt = DateTime.UtcNow,

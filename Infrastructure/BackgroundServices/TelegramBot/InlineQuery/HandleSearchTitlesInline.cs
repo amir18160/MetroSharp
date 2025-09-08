@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using Domain.Entities;
@@ -47,13 +48,28 @@ namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
 
             foreach (var item in results)
             {
+                string year = "";
+                if (item.Year is > 0)
+                {
+                    year = item.Year.Value.ToString();
+                }
+                else
+                {
+                    var dateString = item.Released;
+                    const string dateFormat = "dd MMM yyyy";
+                    var date = DateTime.TryParseExact(dateString, dateFormat, CultureInfo.InvariantCulture,
+                        DateTimeStyles.None, out var parsed);
+                    year = parsed.Year.ToString();
+                }
+
+
                 var qr = new InlineQueryResultArticle
                 {
                     Id = item.ImdbId,
                     Description = MessageGeneratorHelper.E(
                         StringUtilities.TruncateAtWord(item.PlotFa, 50)
                     ),
-                    Title = $"{item.Title} {item.Year}",
+                    Title = $"{item.Title} {year}",
                     ThumbnailUrl = item.Poster,
                     InputMessageContent = GenerateDescription(item),
                     // ReplyMarkup = new InlineKeyboardMarkup(new List<InlineKeyboardButton>()
@@ -79,25 +95,34 @@ namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
 
         private InputTextMessageContent GenerateDescription(OmdbItem item)
         {
-
             var imdbUrl = StringUtilities.GetIMDbURL(item.ImdbId);
-            var titleTxt = $"{item.Title} {item.Year} ({(item.Type == Domain.Enums.OmdbItemType.Movie ? _messages.Common.Movie : _messages.Common.Series)})";
+
+            var yearPart = item.Year > 0 ? $" {item.Year}" : string.Empty;
+            var typePart = item.Type == Domain.Enums.OmdbItemType.Movie
+                ? _messages.Common.Movie
+                : _messages.Common.Series;
+
+            var titleTxt = $"{item.Title}{yearPart} ({typePart})";
 
             var sb = new StringBuilder();
 
             // Title + IMDb link
-            sb.AppendLine($@"🎬 <a href=""{MessageGeneratorHelper.E(imdbUrl)}""><b>{MessageGeneratorHelper.E(titleTxt)}</b></a>");
+            sb.AppendLine(
+                $@"🎬 <a href=""{MessageGeneratorHelper.E(imdbUrl)}""><b>{MessageGeneratorHelper.E(titleTxt)}</b></a>");
 
             // Ratings
             var ratingParts = new List<string>();
-            if (item.ImdbRating.HasValue)
-                ratingParts.Add($"⭐ <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Imdb)}</b>: {item.ImdbRating:F1} ({item.ImdbVotes})");
+            if (item.ImdbRating is > 0)
+                ratingParts.Add(
+                    $"⭐ <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Imdb)}</b>: {item.ImdbRating:F1} ({item.ImdbVotes})");
 
-            if (item.RottenTomatoesScore.HasValue)
-                ratingParts.Add($"🍅 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Rotten)}</b>: {item.RottenTomatoesScore}");
+            if (item.RottenTomatoesScore is > 0)
+                ratingParts.Add(
+                    $"🍅 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Rotten)}</b>: {item.RottenTomatoesScore}");
 
-            if (item.Metascore.HasValue)
-                ratingParts.Add($"📊 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Metascore)}</b>: {item.Metascore}");
+            if (item.Metascore is > 0)
+                ratingParts.Add(
+                    $"📊 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Metascore)}</b>: {item.Metascore}");
 
             if (ratingParts.Count != 0)
             {
@@ -106,16 +131,20 @@ namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
             }
 
             // Genres
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏷️", _messages.InlineQuerySearchResponse.Genres, MessageGeneratorHelper.JoinOrEmpty(item.Genres));
+            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏷️", _messages.InlineQuerySearchResponse.Genres,
+                MessageGeneratorHelper.JoinOrEmpty(item.Genres));
 
             // Actors
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎭", _messages.InlineQuerySearchResponse.Actors, MessageGeneratorHelper.JoinOrEmpty(item.Actors));
+            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎭", _messages.InlineQuerySearchResponse.Actors,
+                MessageGeneratorHelper.JoinOrEmpty(item.Actors));
 
             // Directors
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎬", _messages.InlineQuerySearchResponse.Directors, MessageGeneratorHelper.JoinOrEmpty(item.Directors));
+            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎬", _messages.InlineQuerySearchResponse.Directors,
+                MessageGeneratorHelper.JoinOrEmpty(item.Directors));
 
             // Writers
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "✍️", _messages.InlineQuerySearchResponse.Writers, MessageGeneratorHelper.JoinOrEmpty(item.Writers));
+            MessageGeneratorHelper.AppendIfNotEmpty(sb, "✍️", _messages.InlineQuerySearchResponse.Writers,
+                MessageGeneratorHelper.JoinOrEmpty(item.Writers));
 
             // Plot
             var plotRaw = StringUtilities.TruncateAtWord(item.PlotFa ?? item.Plot, 300) ?? "";
@@ -128,15 +157,18 @@ namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
             }
 
             // Languages
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🗣️", _messages.InlineQuerySearchResponse.Languages, MessageGeneratorHelper.JoinOrEmpty(item.Languages)?.Replace(",", ", "));
+            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🗣️", _messages.InlineQuerySearchResponse.Languages,
+                MessageGeneratorHelper.JoinOrEmpty(item.Languages)?.Replace(",", ", "));
 
             // BoxOffice
             if (MessageGeneratorHelper.HasValue(item.BoxOffice))
-                sb.AppendLine($"💰 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.BoxOffice)}</b>: {MessageGeneratorHelper.E(item.BoxOffice)}");
+                sb.AppendLine(
+                    $"💰 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.BoxOffice)}</b>: {MessageGeneratorHelper.E(item.BoxOffice)}");
 
             // Awards
             if (MessageGeneratorHelper.HasValue(item.Awards))
-                MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏆", _messages.InlineQuerySearchResponse.Awards, item.Awards);
+                MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏆", _messages.InlineQuerySearchResponse.Awards,
+                    item.Awards);
 
             sb.AppendLine();
             sb.AppendLine($"🔎 <i>IMDb</i> • <code>{item.ImdbId}</code>");
@@ -146,7 +178,5 @@ namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
                 ParseMode = ParseMode.Html
             };
         }
-
-        
     }
 }

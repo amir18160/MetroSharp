@@ -3,7 +3,8 @@
 public enum MovieSeriesNotificationType
 {
     NewMovie,
+    NewAndHotMovie,
     NewSeries,
-    NewAndHot,
     UpdatedSeries,
+    Recommended,
 }

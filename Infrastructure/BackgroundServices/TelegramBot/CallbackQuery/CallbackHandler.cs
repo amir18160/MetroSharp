@@ -23,11 +23,19 @@ namespace Infrastructure.BackgroundServices.TelegramBot.CallbackQuery
             }
             else if (callbackType == CallbackDataSerializer.CallbackType.Download)
             {
-                await _callbackDownloadHandler.HandleDownload(callbackQuery);
+                await _callbackDownloadHandler.HandleDownloadAsync(callbackQuery);
             }
             else if (callbackType == CallbackDataSerializer.CallbackType.Document)
             {
-                await _callbackDownloadHandler.HandleDocument(callbackQuery);
+                await _callbackDownloadHandler.HandleDocumentAsync(callbackQuery);
+            }
+            else if (callbackType == CallbackDataSerializer.CallbackType.Season)
+            {
+                await  _callbackDownloadHandler.HandleSeasonAsync(callbackQuery);
+            }
+            else if (callbackType == CallbackDataSerializer.CallbackType.Episode)
+            {
+                await  _callbackDownloadHandler.HandleEpisodeAsync(callbackQuery);
             }
             else if (callbackType == CallbackDataSerializer.CallbackType.RecommendedTitles)
             {

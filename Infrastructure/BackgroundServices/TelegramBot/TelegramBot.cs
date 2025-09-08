@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Domain.Models.TelegramBot.Messages;
+using Infrastructure.BackgroundServices.TelegramBot.Admin;
 using Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
 using Infrastructure.BackgroundServices.TelegramBot.Command;
 using Infrastructure.BackgroundServices.TelegramBot.Configs;
@@ -64,6 +65,8 @@ namespace Infrastructure.BackgroundServices.TelegramBot
         {
             if (message.Text == null) return;
 
+        
+            
             var text = message.Text.ToLower();
 
             using var scope = _scopeFactory.CreateScope();
@@ -71,6 +74,7 @@ namespace Infrastructure.BackgroundServices.TelegramBot
             var keyboardHandler = scope.ServiceProvider.GetRequiredService<KeyboardHandler>();
             var chosenInlineHandler = scope.ServiceProvider.GetRequiredService<ChosenInlineHandler>();
 
+            
             if (CommandHandler.IsCommand(text))
             {
                 await commandHandler.HandleCommand(message);
@@ -110,7 +114,12 @@ namespace Infrastructure.BackgroundServices.TelegramBot
                 }
                 else if (update.TLUpdate is TL.UpdateNewChannelMessage updateNewChannelMessage)
                 {
-                    _logger.LogInformation(JsonSerializer.Serialize(updateNewChannelMessage.message));
+                    var handleForwardedMessages = scope.ServiceProvider.GetRequiredService<HandleForwardedFiles>();
+                    var shouldHandleForwardedMessage = await handleForwardedMessages.ShouldHandleMessage(updateNewChannelMessage);
+                    if (shouldHandleForwardedMessage)
+                    {
+                        await handleForwardedMessages.HandleAsync(updateNewChannelMessage);
+                    }
                 }
             }
         }

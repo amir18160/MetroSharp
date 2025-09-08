@@ -19,8 +19,9 @@ namespace Domain.Models.TelegramBot.Messages
         public InlineQuerySearchResponse InlineQuerySearchResponse { get; set; }
         public CallbackQueryResponse CallbackQueryResponse { get; set; }
 
-
+        public ManuelMessagesResponse ManuelMessagesResponse { get; set; }
     }
+
     public class KeyboardButtons
     {
         public string AboutUs { get; set; }
@@ -28,6 +29,7 @@ namespace Domain.Models.TelegramBot.Messages
         public string LatestTitles { get; set; }
         public string SearchTitles { get; set; }
     }
+
     public class CallbackButtons
     {
         public string Search { get; set; }
@@ -36,6 +38,7 @@ namespace Domain.Models.TelegramBot.Messages
         public string RecommendedTitles { get; set; }
         public string NewPopularTitles { get; set; }
     }
+
     public class CallbackQueryResponse
     {
         public string IsSoftSubbed { get; set; }
@@ -45,11 +48,20 @@ namespace Domain.Models.TelegramBot.Messages
         public string Encoder { get; set; }
         public string FileName { get; set; }
         public string SelectDocument { get; set; }
-
+        public string SelectSeason { get; set; }
+        public string SelectEpisode { get; set; }
+        
+        public string SelectedSeries { set; get; }
+        public string SelectedMovie { set; get; }
+        public string SelectedSeason { set; get; }
+        public string SelectedEpisode { set; get; }
     }
+
     public class ErrorMessages
     {
         public string Unknown { get; set; }
+        public string NotFound { get; set; }
+        public string Unsupported { get; set; }
         public string NotImplemented { get; set; }
     }
 
@@ -96,6 +108,13 @@ namespace Domain.Models.TelegramBot.Messages
         public string Yes { get; set; }
         public string No { get; set; }
     }
+
+    public class ManuelMessagesResponse
+    {
+        public string NewMovie { get; set; }
+        public string NewAndHotMovie { get; set; }
+        public string NewSeries { get; set; }
+        public string UpdatedSeries { get; set; }
+        public string Recommended { get; set; }
+    }
 }
-
-

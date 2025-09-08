@@ -61,7 +61,9 @@ namespace Infrastructure.BackgroundServices.TelegramBot.CallbackQuery
             {
                 var sb = new StringBuilder();
                 
-                var titleWithYear = $"{item.omdbItem.Title} ({item.omdbItem.Year?.ToString() ?? "N/A"})";
+                var yearPart = item.omdbItem.Year > 0 ? $" ({item.omdbItem.Year})" : string.Empty;
+                
+                var titleWithYear = $"{item.omdbItem.Title}{yearPart}";
                 var link = $"https://t.me/MetroDBBot?start=imdbId={item.omdbItem.ImdbId}";
                 sb.AppendLine($"<b>{item.index + 1}. <a href=\"{link}\">{titleWithYear}</a></b>");
                 

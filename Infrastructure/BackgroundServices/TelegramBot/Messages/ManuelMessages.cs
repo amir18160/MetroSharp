@@ -1,10 +1,12 @@
 ﻿using Application.Interfaces;
 using Domain.Entities;
 using Domain.Models.TelegramBot.ManuelMessages;
+using Domain.Models.TelegramBot.Messages;
 using Infrastructure.BackgroundServices.TelegramBot.Configs;
 using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.Utilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Persistence;
 using Telegram.Bot.Types.Enums;
@@ -17,15 +19,20 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Messages
     {
         private readonly Bot _bot;
         private readonly DataContext _context;
+        private readonly BotMessages _messages;
+        private readonly IHostEnvironment _environment;
         private readonly HandleIMDbId _handleImdbId;
         private readonly TelegramBotSettings _settings;
 
+
         public ManuelMessages(WTelegram.Bot bot, IOptions<TelegramBotSettings> settings, DataContext context,
-            HandleIMDbId handleImdbId)
+            HandleIMDbId handleImdbId, BotMessages messages, IHostEnvironment environment)
         {
             _settings = settings.Value;
             _bot = bot;
             _context = context;
+            _messages = messages;
+            _environment = environment;
             _handleImdbId = handleImdbId;
         }
 
@@ -47,22 +54,24 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Messages
             {
                 new[]
                 {
-                    InlineKeyboardButton.WithUrl("📥 دانلود",
+                    InlineKeyboardButton.WithUrl(_messages.CallbackButtons.Download,
                         $"https://t.me/{_settings.BotUsername}?start=imdbId={omdbItem.ImdbId}"),
-                    InlineKeyboardButton.WithUrl("💬 حمایت",
+                    InlineKeyboardButton.WithUrl(_messages.KeyboardButtons.SupportUs,
                         $"https://t.me/{_settings.BotUsername}?start=support=true")
                 }
             };
 
+            var channelId = _environment.IsDevelopment() ? _settings.BinChannelChatID : _settings.MainChannelID;
+
             try
             {
-                await _bot.SendPhoto(_settings.MainChannelID, omdbItem.Poster, messageBody, ParseMode.Html,
+                await _bot.SendPhoto(channelId, omdbItem.Poster, messageBody, ParseMode.Html,
                     replyMarkup: inlineButtons);
             }
             catch
             {
                 await _bot.SendMessage(
-                    _settings.MainChannelID,
+                    channelId,
                     messageBody,
                     replyMarkup: inlineButtons,
                     parseMode: ParseMode.Html
@@ -79,14 +88,20 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Messages
                 omdbItem.PlotFa ?? omdbItem.Plot, 400
             );
 
+
+            var seasonText = _messages.ManuelMessagesResponse.UpdatedSeries.Replace("{HEADER}",
+                updateDetails.IsFullSeason
+                    ? $"{omdbItem.Title} S{updateDetails.Season:D2}"
+                    : $"{omdbItem.Title} S{updateDetails.Season:D2}E{updateDetails.Episode:D2}");
+
             string headline = notificationType switch
             {
-                MovieSeriesNotificationType.NewMovie => "🎬 کیفیت خوب منتشر شد",
-                MovieSeriesNotificationType.NewAndHot => "🔥 کیفیت خوب منتشر شد - داغ!",
-                MovieSeriesNotificationType.NewSeries => "📺 سریال جدید منتشر شد",
-                MovieSeriesNotificationType.UpdatedSeries =>
-                    $"📡 قسمت جدید منتشر شد (S{updateDetails.Season}E{updateDetails.Episode})",
-                _ => "🎥 محتوای جدید"
+                MovieSeriesNotificationType.NewMovie => _messages.ManuelMessagesResponse.NewMovie,
+                MovieSeriesNotificationType.NewAndHotMovie => _messages.ManuelMessagesResponse.NewAndHotMovie,
+                MovieSeriesNotificationType.NewSeries => _messages.ManuelMessagesResponse.NewSeries,
+                MovieSeriesNotificationType.Recommended => _messages.ManuelMessagesResponse.Recommended,
+                MovieSeriesNotificationType.UpdatedSeries => seasonText,
+                _ => ""
             };
 
             const string rlm = "\u200f";

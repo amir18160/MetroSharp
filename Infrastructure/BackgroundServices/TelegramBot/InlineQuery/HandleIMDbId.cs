@@ -48,15 +48,16 @@ namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
 
             var sb = new StringBuilder();
             var imdbUrl = StringUtilities.GetIMDbURL(item.ImdbId);
-            var typeLabel = item.Type == Domain.Enums.OmdbItemType.Movie
-                ? _messages.Common.Movie
-                : _messages.Common.Series;
-
-            var titleTxt = $"{item.Title} {(item.Year.HasValue ? item.Year.ToString() : "")} · {typeLabel}".Trim();
 
             // ===== Header =====
             if (options.ShowHeader)
             {
+                var typeLabel = item.Type == Domain.Enums.OmdbItemType.Movie
+                    ? _messages.Common.Movie
+                    : _messages.Common.Series;
+                var yearPart = item.Year > 0 ? $" {item.Year}" : string.Empty;
+                var titleTxt = $"{item.Title}{yearPart} · {typeLabel}".Trim();
+
                 sb.AppendLine("╔══════════════════════╗");
                 sb.AppendLine(
                     $"🎬 <a href=\"{MessageGeneratorHelper.E(imdbUrl)}\"><b>{MessageGeneratorHelper.E(titleTxt)}</b></a>");
@@ -70,12 +71,22 @@ namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
                 string imdbVotes = item.ImdbVotes.HasValue ? $" ({item.ImdbVotes})" : "";
                 string imdbRating = item.ImdbRating?.ToString("F1") + imdbVotes;
 
+
                 MessageGeneratorHelper.AppendIfNotEmpty(sb, "⭐", _messages.InlineQuerySearchResponse.Scores.Imdb,
                     imdbRating, false);
-                MessageGeneratorHelper.AppendIfNotEmpty(sb, "🍅", _messages.InlineQuerySearchResponse.Scores.Rotten,
-                    item.RottenTomatoesScore?.ToString(), false);
-                MessageGeneratorHelper.AppendIfNotEmpty(sb, "📊", _messages.InlineQuerySearchResponse.Scores.Metascore,
-                    item.Metascore?.ToString(), false);
+
+                if (item.RottenTomatoesScore is > 0)
+                {
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "🍅", _messages.InlineQuerySearchResponse.Scores.Rotten,
+                        item.RottenTomatoesScore?.ToString(), false);
+                }
+
+                if (item.RottenTomatoesScore is > 0)
+                {
+                    MessageGeneratorHelper.AppendIfNotEmpty(sb, "📊",
+                        _messages.InlineQuerySearchResponse.Scores.Metascore,
+                        item.Metascore?.ToString(), false);
+                }
 
                 sb.AppendLine("\u200F┛━━━━━━━━━━━━━━━━━\n");
             }

@@ -37,6 +37,7 @@ using Infrastructure.FileStorageService;
 using System.Text.Json;
 using Domain.Models.TelegramBot.Messages;
 using Infrastructure.BackgroundServices.DatabaseBackupService;
+using Infrastructure.BackgroundServices.TelegramBot.Admin;
 using Infrastructure.BackgroundServices.TelegramBot.Command;
 using Infrastructure.BackgroundServices.TelegramBot.Keyboard;
 using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
@@ -95,7 +96,8 @@ namespace API.Extensions
         {
             var settings = sp.GetRequiredService<IOptions<TelegramBotSettings>>().Value;
             var isDevelopment = sp.GetRequiredService<IHostEnvironment>().IsDevelopment();
-            var dbConnection = new SqliteConnection(settings.TelegramContext);
+            var connectionString = config.GetConnectionString("TelegramContext");
+            var dbConnection = new SqliteConnection(connectionString);
             var botToken = isDevelopment ? settings.DevelopmentBotToken : settings.BotToken;
             return new WTelegram.Bot(botToken, settings.AppId, settings.ApiHash, dbConnection);
         });
@@ -222,6 +224,9 @@ namespace API.Extensions
             services.AddScoped<CallbackTitleListHandler>();
             services.AddScoped<CallbackDownloadHandler>();
             services.AddScoped<CallbackHandler>();
+
+            services.AddScoped<IsAdmin>();
+            services.AddScoped<HandleForwardedFiles>();
 
             return services;
         }

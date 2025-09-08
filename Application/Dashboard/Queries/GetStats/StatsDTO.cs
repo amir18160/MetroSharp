@@ -16,6 +16,7 @@
         public int TotalFailedTasks { get; set; }
         public int TotalFailedTasksLast24Hours { get; set; }
         public int TotalSuccessfulTasks { get; set; }
+        public int TotalSuccessfulTasksLast24Hours { get; set; }
         
     }
 }
