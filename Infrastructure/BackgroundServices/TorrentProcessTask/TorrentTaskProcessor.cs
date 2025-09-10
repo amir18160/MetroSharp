@@ -1,4 +1,3 @@
-using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
 
 
@@ -14,7 +13,6 @@ namespace Infrastructure.BackgroundServices.TorrentProcessTask
         }
         
         
-        [AutomaticRetry(Attempts = 0)]
         public async Task ProcessTorrentTaskAsync(Guid torrentTaskId, CancellationToken cancellationToken)
         {
             Console.WriteLine($"running task with id {torrentTaskId}" );

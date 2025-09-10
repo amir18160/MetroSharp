@@ -24,6 +24,7 @@ obj/
 .env
 .env.*
 appsettings.*.json
+appsettings.json
 secrets.json
 *.db
 *.db-shm

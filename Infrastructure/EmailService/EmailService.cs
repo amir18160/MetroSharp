@@ -13,7 +13,6 @@ namespace Infrastructure.EmailService
     public class EmailService : IEmailService
     {
         private readonly SmtpSettings _settings;
-        private readonly string _templateDirectory;
         private readonly string _appName;
         private readonly ILogger<EmailService> _logger;
         private readonly IHostEnvironment _env;
@@ -22,7 +21,6 @@ namespace Infrastructure.EmailService
         {
             _logger = logger;
             _settings = options.Value;
-            _templateDirectory = emailSettings.Value.TemplatePath;
             _appName = emailSettings.Value.AppName;
             _env = env;
         }
@@ -40,8 +38,8 @@ namespace Infrastructure.EmailService
         {
             var path = template switch
             {
-                TemplatesEnum.Confirmation => Path.Combine(_templateDirectory, "confirmation.html"),
-                TemplatesEnum.PasswordReset => Path.Combine(_templateDirectory, "reset-password.html"),
+                TemplatesEnum.Confirmation => Path.Combine(AppContext.BaseDirectory, "confirmation.html"),
+                TemplatesEnum.PasswordReset => Path.Combine(AppContext.BaseDirectory, "reset-password.html"),
                 _ => throw new ArgumentOutOfRangeException(nameof(template))
             };
 

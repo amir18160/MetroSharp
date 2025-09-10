@@ -121,7 +121,7 @@ namespace Persistence.Seeds
                     };
 
                     var episodes = new List<Episode>();
-                    for (int e = 1; e <= faker.Random.Int(5, 10); e++)
+                    for (var e = 1; e <= faker.Random.Int(5, 10); e++)
                     {
                         var episode = new Episode
                         {

@@ -55,6 +55,7 @@ namespace Domain.Models.TelegramBot.Messages
         public string SelectedMovie { set; get; }
         public string SelectedSeason { set; get; }
         public string SelectedEpisode { set; get; }
+        public string TitleNotAvailable { get; set; }
     }
 
     public class ErrorMessages

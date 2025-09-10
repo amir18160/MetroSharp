@@ -1,5 +1,4 @@
 using Domain.Enums;
-using Hangfire;
 using Infrastructure.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;

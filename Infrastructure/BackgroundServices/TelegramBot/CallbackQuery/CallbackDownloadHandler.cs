@@ -65,11 +65,19 @@ namespace Infrastructure.BackgroundServices.TelegramBot.CallbackQuery
                 return;
             }
 
+            if (omdbItem.Documents != null && omdbItem.Seasons.Count == 0)
+            {
+                await _bot.SendMessage(callbackQuery.user_id, _messages.CallbackQueryResponse.TitleNotAvailable,
+                    ParseMode.Html, BuildReplyParameters(callbackQuery));
+                return;
+            }
+
             switch (omdbItem.Type)
             {
                 case Domain.Enums.OmdbItemType.Movie:
                     // Prefix with movie info
-                    var moviePrefix = $"{_messages.CallbackQueryResponse.SelectedMovie}: {omdbItem.Title ?? omdbItem.ImdbId}";
+                    var moviePrefix =
+                        $"{_messages.CallbackQueryResponse.SelectedMovie}: {omdbItem.Title ?? omdbItem.ImdbId}";
                     await _bot.SendMessage(
                         callbackQuery.user_id,
                         $"{moviePrefix}\n\n{GetPrompt(MessagePrompt.SelectDocument)}",
@@ -80,7 +88,8 @@ namespace Infrastructure.BackgroundServices.TelegramBot.CallbackQuery
 
                 case Domain.Enums.OmdbItemType.Series:
                     // Prefix with series title when listing seasons
-                    var seriesPrefix = $"{_messages.CallbackQueryResponse.SelectedSeries} {omdbItem.Title ?? omdbItem.ImdbId}";
+                    var seriesPrefix =
+                        $"{_messages.CallbackQueryResponse.SelectedSeries} {omdbItem.Title ?? omdbItem.ImdbId}";
                     await _bot.SendMessage(
                         callbackQuery.user_id,
                         $"{seriesPrefix}\n\n{GetPrompt(MessagePrompt.SelectSeason)}",
@@ -352,7 +361,7 @@ namespace Infrastructure.BackgroundServices.TelegramBot.CallbackQuery
             var rows = iEnumerable
                 .Select(d => new[]
                 {
-                    InlineKeyboardButton.WithCallbackData("", "") 
+                    InlineKeyboardButton.WithCallbackData("", "")
                 })
                 .ToList();
 
