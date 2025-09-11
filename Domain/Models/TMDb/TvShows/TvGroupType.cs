@@ -1,13 +1,12 @@
-﻿namespace Domain.Models.TMDb.TvShows
+﻿namespace Domain.Models.TMDb.TvShows;
+
+public enum TvGroupType
 {
-    public enum TvGroupType
-    {
-        OriginalAirDate = 1,
-        Absolute = 2,
-        DVD = 3,
-        Digital = 4,
-        StoryArc = 5,
-        Production = 6,
-        TV = 7
-    }
+    OriginalAirDate = 1,
+    Absolute = 2,
+    DVD = 3,
+    Digital = 4,
+    StoryArc = 5,
+    Production = 6,
+    TV = 7
 }

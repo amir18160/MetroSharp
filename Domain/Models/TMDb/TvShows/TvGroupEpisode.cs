@@ -1,10 +1,6 @@
-﻿
+﻿namespace Domain.Models.TMDb.TvShows;
 
-namespace Domain.Models.TMDb.TvShows
+public class TvGroupEpisode : TvEpisodeBase
 {
-    public class TvGroupEpisode : TvEpisodeBase
-    {
-        
-        public int Order { get; set; }
-    }
+    public int Order { get; set; }
 }

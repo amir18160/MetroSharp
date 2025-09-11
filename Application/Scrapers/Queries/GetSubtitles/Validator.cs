@@ -1,17 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using FluentValidation;
 
-namespace Application.Scrapers.Queries.GetSubtitles
+namespace Application.Scrapers.Queries.GetSubtitles;
+
+public class Validator : AbstractValidator<Query>
 {
-    public class Validator: AbstractValidator<Query>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.URL)
-                .NotEmpty();
-        }
+        RuleFor(x => x.URL)
+            .NotEmpty();
     }
 }

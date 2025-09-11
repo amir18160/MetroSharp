@@ -1,11 +1,6 @@
-﻿using System.Collections.Generic;
+﻿namespace Domain.Models.TMDb.TvShows;
 
-
-namespace Domain.Models.TMDb.TvShows
+public class CreditsWithGuestStars : Credits
 {
-    public class CreditsWithGuestStars : Credits
-    {
-        
-        public List<Cast> GuestStars { get; set; }
-    }
+    public List<Cast> GuestStars { get; set; }
 }

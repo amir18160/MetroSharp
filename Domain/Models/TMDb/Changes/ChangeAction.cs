@@ -1,20 +1,18 @@
-﻿namespace Domain.Models.TMDb.Changes
+﻿namespace Domain.Models.TMDb.Changes;
+
+public enum ChangeAction
 {
-
-    public enum ChangeAction
-    {
-        Unknown,
-
-    
-        Added = 1,
+    Unknown,
 
 
-        Created = 2,
+    Added = 1,
 
-        Updated = 3,
 
-        Deleted = 4,
+    Created = 2,
 
-        Destroyed = 5
-    }
+    Updated = 3,
+
+    Deleted = 4,
+
+    Destroyed = 5
 }

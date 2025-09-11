@@ -1,11 +1,9 @@
-﻿namespace Domain.Models.TMDb.TvShows
-{
-    public class Cast : CastBase
-    {
-        
-        public string Character { get; set; }
+﻿namespace Domain.Models.TMDb.TvShows;
 
-        
-        public string CreditId { get; set; }
-    }
+public class Cast : CastBase
+{
+    public string Character { get; set; }
+
+
+    public string CreditId { get; set; }
 }

@@ -1,10 +1,9 @@
-﻿namespace Domain.Models.TMDb.Collections
+﻿namespace Domain.Models.TMDb.Collections;
+
+[Flags]
+public enum CollectionMethods
 {
-    [Flags]
-    public enum CollectionMethods
-    {
-        Undefined = 0,
-        Images = 1,
-        Translations = 2,
-    }
+    Undefined = 0,
+    Images = 1,
+    Translations = 2
 }

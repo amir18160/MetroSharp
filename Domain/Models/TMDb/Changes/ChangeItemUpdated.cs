@@ -1,18 +1,15 @@
+namespace Domain.Models.TMDb.Changes;
 
-
-namespace Domain.Models.TMDb.Changes
+public class ChangeItemUpdated : ChangeItemBase
 {
-    public class ChangeItemUpdated : ChangeItemBase
+    public ChangeItemUpdated()
     {
-        public ChangeItemUpdated()
-        {
-            Action = ChangeAction.Updated;
-        }
-
-        
-        public object OriginalValue { get; set; }
-
-        
-        public object Value { get; set; }
+        Action = ChangeAction.Updated;
     }
+
+
+    public object OriginalValue { get; set; }
+
+
+    public object Value { get; set; }
 }

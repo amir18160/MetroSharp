@@ -5,17 +5,16 @@ using Commands = Application.Telegram.Commands;
 
 // using Queries = 
 
-namespace API.Controllers
+namespace API.Controllers;
+
+public class TelegramController : BaseApiController
 {
-    public class TelegramController : BaseApiController
+    [Authorize(Policy = RolesPolicy.OwnerOrAdmin)]
+    [HttpPost("send-movie-series-notification")]
+    public async Task<IActionResult> SendMovieSeriesNotificationPost(
+        [FromBody] Commands.SendMovieSeriesNotification.Command command)
     {
-        [Authorize(Policy = RolesPolicy.OwnerOrAdmin)]
-        [HttpPost("send-movie-series-notification")]
-        public async Task<IActionResult> SendMovieSeriesNotificationPost(
-            [FromBody] Commands.SendMovieSeriesNotification.Command command)
-        {
-            var result = await Mediator.Send(command);
-            return HandleResult(result);
-        }
+        var result = await Mediator.Send(command);
+        return HandleResult(result);
     }
 }

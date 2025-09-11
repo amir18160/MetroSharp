@@ -1,12 +1,11 @@
-﻿namespace Domain.Models.TMDb.Movies
+﻿namespace Domain.Models.TMDb.Movies;
+
+public enum ReleaseDateType
 {
-    public enum ReleaseDateType
-    {
-        Premiere = 1,
-        TheatricalLimited = 2,
-        Theatrical = 3,
-        Digital = 4,
-        Physical = 5,
-        TV = 6
-    }
+    Premiere = 1,
+    TheatricalLimited = 2,
+    Theatrical = 3,
+    Digital = 4,
+    Physical = 5,
+    TV = 6
 }

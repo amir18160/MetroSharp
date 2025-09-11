@@ -1,12 +1,11 @@
 using FluentValidation;
 
-namespace Application.Users.Commands.RequestResetPassword
+namespace Application.Users.Commands.RequestResetPassword;
+
+public class Validator : AbstractValidator<Command>
 {
-    public class Validator : AbstractValidator<Command>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.Email).NotEmpty().EmailAddress();
-        }
+        RuleFor(x => x.Email).NotEmpty().EmailAddress();
     }
 }

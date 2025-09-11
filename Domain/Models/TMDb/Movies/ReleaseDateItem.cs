@@ -1,20 +1,16 @@
-﻿using System;
+﻿namespace Domain.Models.TMDb.Movies;
 
-namespace Domain.Models.TMDb.Movies
+public class ReleaseDateItem
 {
-    public class ReleaseDateItem
-    {
-        
-        public string Certification { get; set; }
+    public string Certification { get; set; }
 
-        public string Iso_639_1 { get; set; }
+    public string Iso_639_1 { get; set; }
 
-        
-        public string Note { get; set; }
 
-                public DateTime ReleaseDate { get; set; }
+    public string Note { get; set; }
 
-        
-        public ReleaseDateType Type { get; set; }
-    }
+    public DateTime ReleaseDate { get; set; }
+
+
+    public ReleaseDateType Type { get; set; }
 }

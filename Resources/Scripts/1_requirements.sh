@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # install-media-stack-ubuntu-new.sh
 # Installs dotnet 9 (preferred via distro packages, fallback to dotnet-install),
-# Playwright (.NET CLI + browsers), Prowlarr, qbittorrent-nox (webui port 8083),
+# Prowlarr, qbittorrent-nox (webui port 8083),
 # Caddy, and ffmpeg (with fallback to static build).
 # Target: Ubuntu 22.04 / 24.04 and newer (auto-detected)
 # Run as root (sudo)
@@ -155,29 +155,8 @@ else
   echo "dotnet installation failed - please check manually." >&2
 fi
 
-#### 2) Install Playwright (.NET) and browsers ####
-echo
-echo "=== Playwright (.NET) installation ==="
-PLAYWRIGHT_TOOL_PATH=/usr/local/bin
-mkdir -p "$PLAYWRIGHT_TOOL_PATH"
 
-if [ ! -x "$PLAYWRIGHT_TOOL_PATH/playwright" ]; then
-  echo "Installing Playwright CLI as a global tool..."
-  dotnet tool install --tool-path "$PLAYWRIGHT_TOOL_PATH" Microsoft.Playwright.CLI || true
-  chmod +x "$PLAYWRIGHT_TOOL_PATH/playwright" || true
-fi
-
-if command -v "$PLAYWRIGHT_TOOL_PATH/playwright" >/dev/null 2>&1; then
-  PW="$PLAYWRIGHT_TOOL_PATH/playwright"
-  echo "Running playwright install-deps (may call apt)."
-  "$PW" install-deps || true
-  echo "Installing browsers (Chromium, Firefox, WebKit) via Playwright CLI..."
-  "$PW" install || true
-else
-  echo "Playwright CLI not found. You may need to install Microsoft.Playwright.CLI manually." >&2
-fi
-
-#### 3) Install qBittorrent-nox (headless) ####
+#### 2) Install qBittorrent-nox (headless) ####
 echo
 echo "=== qBittorrent-nox installation (webui port 8083) ==="
 if ! grep -q "qbittorrent-team" /etc/apt/sources.list.d/* >/dev/null 2>&1; then
@@ -217,7 +196,7 @@ EOF
 systemctl daemon-reload
 systemctl enable --now qbittorrent-nox || true
 
-#### 4) Install Caddy (official repo) ####
+#### 3) Install Caddy (official repo) ####
 echo
 echo "=== Caddy installation ==="
 # Add Caddy GPG key and repo
@@ -230,7 +209,7 @@ apt update
 apt install -y caddy || true
 systemctl enable --now caddy || true
 
-#### 5) Install Prowlarr (latest linux-core-x64 release) ####
+#### 4) Install Prowlarr (latest linux-core-x64 release) ####
 echo
 echo "=== Prowlarr installation ==="
 PROWLARR_USER=prowlarr

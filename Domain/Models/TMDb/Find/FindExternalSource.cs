@@ -1,8 +1,7 @@
-namespace Domain.Models.TMDb.Find
+namespace Domain.Models.TMDb.Find;
+
+public enum FindExternalSource
 {
-    public enum FindExternalSource
-    {
-        Imdb,
-        TvDb
-    }
+    Imdb,
+    TvDb
 }

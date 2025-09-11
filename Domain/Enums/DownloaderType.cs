@@ -1,8 +1,7 @@
-namespace Domain.Enums
+namespace Domain.Enums;
+
+public enum DownloaderType
 {
-    public enum DownloaderType
-    {
-        HttpClient,
-        Browser
-    }
+    HttpClient,
+    Browser
 }

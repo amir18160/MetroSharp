@@ -1,17 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Domain.Models.Qbit;
 
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface IQbitClient
 {
-    public interface IQbitClient
-    {
-        Task<List<QbitTorrentInfo>> GetAllQbitTorrentsAsync();
-        Task<bool> AddTorrentAsync(string pathOrMagnetOrTorrentUrl);
-        Task<bool> DeleteTorrentAsync(string hash, bool deleteFiles = true);
-        Task<QbitTorrentInfo> GetQbitTorrentByHashAsync(string hash);
-        Task<bool> UpdateTrackersOfTorrent(string magnet);
-    }
+    Task<List<QbitTorrentInfo>> GetAllQbitTorrentsAsync();
+    Task<bool> AddTorrentAsync(string pathOrMagnetOrTorrentUrl);
+    Task<bool> DeleteTorrentAsync(string hash, bool deleteFiles = true);
+    Task<QbitTorrentInfo> GetQbitTorrentByHashAsync(string hash);
+    Task<bool> UpdateTrackersOfTorrent(string magnet);
 }

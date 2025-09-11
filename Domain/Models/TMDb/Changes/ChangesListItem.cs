@@ -1,8 +1,7 @@
-﻿namespace Domain.Models.TMDb.Changes
+﻿namespace Domain.Models.TMDb.Changes;
+
+public class ChangesListItem
 {
-    public class ChangesListItem
-    {       
-        public bool? Adult { get; set; }
-        public int Id { get; set; }
-    }
+    public bool? Adult { get; set; }
+    public int Id { get; set; }
 }

@@ -1,13 +1,12 @@
 using FluentValidation;
 
-namespace Application.TMDb.Queries.GetTvShowById
+namespace Application.TMDb.Queries.GetTvShowById;
+
+public class Validator : AbstractValidator<Query>
 {
-    public class Validator: AbstractValidator<Query>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.Id)
-                .NotEmpty();
-        }
+        RuleFor(x => x.Id)
+            .NotEmpty();
     }
 }

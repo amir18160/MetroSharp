@@ -1,22 +1,18 @@
-﻿using System;
+﻿namespace Domain.Models.TMDb.TvShows;
 
-namespace Domain.Models.TMDb.TvShows
+[Flags]
+public enum TvEpisodeMethods
 {
-    [Flags]
-    public enum TvEpisodeMethods
-    {
+    Undefined = 0,
 
-        Undefined = 0,
+    Credits = 1,
 
-        Credits = 1,
+    Images = 2,
+    ExternalIds = 4,
 
-        Images = 2,
-        ExternalIds = 4,
+    Videos = 8,
 
-        Videos = 8,
+    AccountStates = 16,
 
-        AccountStates = 16,
-
-        Translations = 32,
-    }
+    Translations = 32
 }

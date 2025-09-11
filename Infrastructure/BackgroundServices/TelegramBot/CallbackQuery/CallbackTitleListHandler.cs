@@ -6,96 +6,90 @@ using Infrastructure.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 
-namespace Infrastructure.BackgroundServices.TelegramBot.CallbackQuery
+namespace Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
+
+public class CallbackTitleListHandler
 {
-    public class CallbackTitleListHandler
+    private readonly DataContext _context;
+    private readonly WTelegram.Bot _bot;
+    private readonly BotMessages _messages;
+
+    public CallbackTitleListHandler(WTelegram.Bot bot, DataContext context, BotMessages messages)
     {
-        private readonly DataContext _context;
-        private readonly WTelegram.Bot _bot;
-        private readonly BotMessages _messages;
-        public CallbackTitleListHandler(WTelegram.Bot bot, DataContext context, BotMessages messages)
+        _bot = bot;
+        _context = context;
+        _messages = messages;
+    }
+
+    public async Task HandleRecommendedTitles(TL.UpdateBotCallbackQuery callbackQuery)
+    {
+        var imdbItems = await _context.OmdbItems
+            .Where(x => x.Tags.Any(y => y.Type == TagType.Recommended))
+            .Include(x => x.Tags)
+            .ToListAsync();
+
+        var messages = CreateTitleListMessages(imdbItems);
+
+        foreach (var msg in messages)
+            await _bot.SendMessage(callbackQuery.user_id, msg, Telegram.Bot.Types.Enums.ParseMode.Html);
+    }
+
+    public async Task HandleNewTitles(TL.UpdateBotCallbackQuery callbackQuery)
+    {
+        var imdbItems = await _context.OmdbItems
+            .Where(x => x.Tags.Any(y => y.Type == TagType.New))
+            .Include(x => x.Tags)
+            .ToListAsync();
+
+        var messages = CreateTitleListMessages(imdbItems);
+
+        foreach (var msg in messages)
+            await _bot.SendMessage(callbackQuery.user_id, msg, Telegram.Bot.Types.Enums.ParseMode.Html);
+    }
+
+
+    private List<string> CreateTitleListMessages(List<OmdbItem> items, int batchSize = 5)
+    {
+        var messages = new List<string>();
+        var chunkBuilder = new StringBuilder();
+        var counter = 0;
+
+        foreach (var item in items.Select((omdbItem, index) => new { omdbItem, index }))
         {
-            _bot = bot;
-            _context = context;
-            _messages = messages;
-        }
+            var sb = new StringBuilder();
 
-        public async Task HandleRecommendedTitles(TL.UpdateBotCallbackQuery callbackQuery)
-        {
-            var imdbItems = await _context.OmdbItems
-                .Where((x=> x.Tags.Any(y => y.Type == TagType.Recommended)))
-                .Include(x=> x.Tags)
-                .ToListAsync();
+            var yearPart = item.omdbItem.Year > 0 ? $" ({item.omdbItem.Year})" : string.Empty;
 
-            var messages = CreateTitleListMessages(imdbItems);
+            var titleWithYear = $"{item.omdbItem.Title}{yearPart}";
+            var link = $"https://t.me/MetroDBBot?start=imdbId={item.omdbItem.ImdbId}";
+            sb.AppendLine($"<b>{item.index + 1}. <a href=\"{link}\">{titleWithYear}</a></b>");
 
-            foreach (var msg in messages)
+            var rating = item.omdbItem.ImdbRating?.ToString("0.0") ?? "N/A";
+            var votes = item.omdbItem.ImdbVotes?.ToString("N0") ?? "N/A";
+            sb.AppendLine($"<b>IMDb:</b> {rating} ({votes} votes)");
+
+            if (!string.IsNullOrWhiteSpace(item.omdbItem.Plot))
             {
-                await _bot.SendMessage(callbackQuery.user_id, msg, Telegram.Bot.Types.Enums.ParseMode.Html);
-            }
-        }
+                var plot = StringUtilities.TruncateAtWord(item.omdbItem.PlotFa ?? item.omdbItem.Plot, 200);
 
-        public async Task HandleNewTitles(TL.UpdateBotCallbackQuery callbackQuery)
-        {
-            var imdbItems = await _context.OmdbItems
-                .Where((x=> x.Tags.Any(y => y.Type == TagType.New)))
-                .Include(x=> x.Tags)
-                .ToListAsync();
-            
-            var messages = CreateTitleListMessages(imdbItems);
-
-            foreach (var msg in messages)
-            {
-                await _bot.SendMessage(callbackQuery.user_id, msg, Telegram.Bot.Types.Enums.ParseMode.Html);
-            }
-        }
-
-
-        private List<string> CreateTitleListMessages(List<OmdbItem> items, int batchSize = 5)
-        {
-            var messages = new List<string>();
-            var chunkBuilder = new StringBuilder();
-            var counter = 0;
-
-            foreach (var item in items.Select((omdbItem, index) => new { omdbItem, index }))
-            {
-                var sb = new StringBuilder();
-                
-                var yearPart = item.omdbItem.Year > 0 ? $" ({item.omdbItem.Year})" : string.Empty;
-                
-                var titleWithYear = $"{item.omdbItem.Title}{yearPart}";
-                var link = $"https://t.me/MetroDBBot?start=imdbId={item.omdbItem.ImdbId}";
-                sb.AppendLine($"<b>{item.index + 1}. <a href=\"{link}\">{titleWithYear}</a></b>");
-                
-                var rating = item.omdbItem.ImdbRating?.ToString("0.0") ?? "N/A";
-                var votes = item.omdbItem.ImdbVotes?.ToString("N0") ?? "N/A";
-                sb.AppendLine($"<b>IMDb:</b> {rating} ({votes} votes)");
-                
-                if (!string.IsNullOrWhiteSpace(item.omdbItem.Plot))
-                {
-                    var plot = StringUtilities.TruncateAtWord(item.omdbItem.PlotFa ?? item.omdbItem.Plot, 200);
-
-                    sb.AppendLine($"<b>{_messages.InlineQuerySearchResponse.Plot}:</b> <i>{plot}</i>");
-                }
-
-                chunkBuilder.AppendLine(sb.ToString().Trim());
-                chunkBuilder.AppendLine(); 
-                counter++;
-                
-                if (counter % batchSize == 0)
-                {
-                    messages.Add(chunkBuilder.ToString().Trim());
-                    chunkBuilder.Clear();
-                }
+                sb.AppendLine($"<b>{_messages.InlineQuerySearchResponse.Plot}:</b> <i>{plot}</i>");
             }
 
-            // Add remaining items
-            if (chunkBuilder.Length > 0)
+            chunkBuilder.AppendLine(sb.ToString().Trim());
+            chunkBuilder.AppendLine();
+            counter++;
+
+            if (counter % batchSize == 0)
+            {
                 messages.Add(chunkBuilder.ToString().Trim());
-
-            return messages;
+                chunkBuilder.Clear();
+            }
         }
 
+        // Add remaining items
+        if (chunkBuilder.Length > 0)
+            messages.Add(chunkBuilder.ToString().Trim());
 
+        return messages;
     }
 }

@@ -1,10 +1,7 @@
-﻿
+﻿namespace Domain.Models.TMDb.General;
 
-namespace Domain.Models.TMDb.General
+public class Genre
 {
-    public class Genre
-    {
-        public int Id { get; set; }
-        public string Name { get; set; }
-    }
+    public int Id { get; set; }
+    public string Name { get; set; }
 }

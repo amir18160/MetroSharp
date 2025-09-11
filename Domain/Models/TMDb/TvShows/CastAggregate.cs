@@ -1,15 +1,9 @@
-﻿using System.Collections.Generic;
+﻿namespace Domain.Models.TMDb.TvShows;
 
-using Domain.Models.TMDb.People;
-
-namespace Domain.Models.TMDb.TvShows
+public class CastAggregate : CastBase
 {
-    public class CastAggregate : CastBase
-    {
-        
-        public List<CastRole> Roles { get; set; }
+    public List<CastRole> Roles { get; set; }
 
-        
-        public int TotalEpisodeCount { get; set; }
-    }
+
+    public int TotalEpisodeCount { get; set; }
 }

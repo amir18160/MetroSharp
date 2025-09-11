@@ -1,10 +1,9 @@
-namespace Domain.Models.TMDb.Changes
+namespace Domain.Models.TMDb.Changes;
+
+public class ChangeItemCreated : ChangeItemBase
 {
-    public class ChangeItemCreated : ChangeItemBase
+    public ChangeItemCreated()
     {
-        public ChangeItemCreated()
-        {
-            Action = ChangeAction.Created;
-        }
+        Action = ChangeAction.Created;
     }
 }

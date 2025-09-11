@@ -1,23 +1,19 @@
-﻿
+﻿namespace Domain.Models.TMDb.TvShows;
 
-namespace Domain.Models.TMDb.TvShows
+[Flags]
+public enum TvSeasonMethods
 {
-    [Flags]
-    public enum TvSeasonMethods
-    {
-    
-        Undefined = 0,
-       
-        Credits = 1,
-       
-        Images = 2,
+    Undefined = 0,
 
-        ExternalIds = 4,
-     
-        Videos = 8,
-   
-        AccountStates = 16,
-    
-        Translations = 32,
-    }
+    Credits = 1,
+
+    Images = 2,
+
+    ExternalIds = 4,
+
+    Videos = 8,
+
+    AccountStates = 16,
+
+    Translations = 32
 }

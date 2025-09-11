@@ -1,8 +1,7 @@
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface IEmailService
 {
-    public interface IEmailService
-    {
-        Task<bool> SendConfirmationEmail(string to, string UserName, string confirmationLink);
-        Task<bool> SendPasswordResetEmail(string to, string userName, string resetLink);
-    }
+    Task<bool> SendConfirmationEmail(string to, string UserName, string confirmationLink);
+    Task<bool> SendPasswordResetEmail(string to, string userName, string resetLink);
 }

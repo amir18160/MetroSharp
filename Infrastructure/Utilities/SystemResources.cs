@@ -1,35 +1,25 @@
-using System;
-using System.IO;
+namespace Infrastructure.Utilities;
 
-namespace Infrastructure.Utilities
+public class SystemResources
 {
-    public class SystemResources
+    public static long GetTotalFreeSpace(string driveName)
     {
-        public static long GetTotalFreeSpace(string driveName)
-        {
-            foreach (DriveInfo drive in DriveInfo.GetDrives())
-            {
-                if (drive.IsReady && string.Equals(drive.Name, driveName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return drive.TotalFreeSpace;
-                }
-            }
+        foreach (var drive in DriveInfo.GetDrives())
+            if (drive.IsReady && string.Equals(drive.Name, driveName, StringComparison.OrdinalIgnoreCase))
+                return drive.TotalFreeSpace;
 
-            throw new InvalidDataException("No drive with such name was found.");
-        }
+        throw new InvalidDataException("No drive with such name was found.");
+    }
 
-        public static long GetCurrentDriveFreeSpace()
-        {
-            string appPath = AppContext.BaseDirectory;
+    public static long GetCurrentDriveFreeSpace()
+    {
+        var appPath = AppContext.BaseDirectory;
 
-            string root = Path.GetPathRoot(appPath);
+        var root = Path.GetPathRoot(appPath);
 
-            if (string.IsNullOrWhiteSpace(root))
-            {
-                throw new InvalidOperationException("Failed to determine drive root from app path.");
-            }
+        if (string.IsNullOrWhiteSpace(root))
+            throw new InvalidOperationException("Failed to determine drive root from app path.");
 
-            return GetTotalFreeSpace(root);
-        }
+        return GetTotalFreeSpace(root);
     }
 }

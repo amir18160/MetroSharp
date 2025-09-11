@@ -2,7 +2,6 @@
 
 namespace Application.Dashboard.Queries.GetStats;
 
-public class Validator: AbstractValidator<Query>
+public class Validator : AbstractValidator<Query>
 {
-    
 }

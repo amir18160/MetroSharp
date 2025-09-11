@@ -1,23 +1,19 @@
-﻿
+﻿namespace Domain.Models.TMDb.People;
 
-namespace Domain.Models.TMDb.People
+[Flags]
+public enum PersonMethods
 {
-    [Flags]
-    public enum PersonMethods
-    {
+    Undefined = 0,
+    MovieCredits = 1,
+    TvCredits = 2,
 
-        Undefined = 0,
-        MovieCredits = 1,
-        TvCredits = 2,
+    ExternalIds = 4,
 
-        ExternalIds = 4,
+    Images = 8,
 
-        Images = 8,
+    TaggedImages = 16,
 
-        TaggedImages = 16,
+    Changes = 32,
 
-        Changes = 32,
-
-        Translations = 64,
-    }
+    Translations = 64
 }

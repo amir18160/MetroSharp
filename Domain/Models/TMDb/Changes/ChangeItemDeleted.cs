@@ -1,15 +1,12 @@
+namespace Domain.Models.TMDb.Changes;
 
-
-namespace Domain.Models.TMDb.Changes
+public class ChangeItemDeleted : ChangeItemBase
 {
-    public class ChangeItemDeleted : ChangeItemBase
+    public ChangeItemDeleted()
     {
-        public ChangeItemDeleted()
-        {
-            Action = ChangeAction.Deleted;
-        }
-
-        
-        public object OriginalValue { get; set; }
+        Action = ChangeAction.Deleted;
     }
+
+
+    public object OriginalValue { get; set; }
 }

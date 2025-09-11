@@ -1,12 +1,9 @@
+namespace Domain.Models.TMDb.People;
 
-namespace Domain.Models.TMDb.People
+public enum PersonGender
 {
-    public enum PersonGender
-    {
-    
-        Unknown = 0,
-        Female = 1,
-        Male = 2,
-        NonBinary = 3
-    }
+    Unknown = 0,
+    Female = 1,
+    Male = 2,
+    NonBinary = 3
 }

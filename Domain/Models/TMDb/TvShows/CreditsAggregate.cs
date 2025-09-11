@@ -1,18 +1,14 @@
-﻿using System.Collections.Generic;
+﻿using Domain.Models.TMDb.General;
 
-using Domain.Models.TMDb.General;
+namespace Domain.Models.TMDb.TvShows;
 
-namespace Domain.Models.TMDb.TvShows
+public class CreditsAggregate
 {
-    public class CreditsAggregate
-    {
-        
-        public List<CastAggregate> Cast { get; set; }
+    public List<CastAggregate> Cast { get; set; }
 
-        
-        public List<CrewAggregate> Crew { get; set; }
 
-        
-        public int Id { get; set; }
-    }
+    public List<CrewAggregate> Crew { get; set; }
+
+
+    public int Id { get; set; }
 }

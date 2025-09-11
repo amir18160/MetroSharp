@@ -1,12 +1,8 @@
-﻿
+﻿namespace Domain.Models.TMDb.General;
 
-namespace Domain.Models.TMDb.General
+public class DateRange
 {
-    public class DateRange
-    {
+    public DateTime Maximum { get; set; }
 
-        public DateTime Maximum { get; set; }
-
-        public DateTime Minimum { get; set; }
-    }
+    public DateTime Minimum { get; set; }
 }

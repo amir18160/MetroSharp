@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net;
 using System.Text;
 using Domain.Entities;
 using Domain.Models.TelegramBot.Messages;
@@ -11,172 +10,169 @@ using Persistence;
 using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.InlineQueryResults;
 using WTelegram;
-using Telegram.Bot.Types.ReplyMarkups;
-using Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
 
-namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
+namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
+
+public class HandleSearchTitlesInline
 {
-    public class HandleSearchTitlesInline
+    private readonly Bot _bot;
+    private readonly DataContext _context;
+    private readonly BotMessages _messages;
+    private readonly ILogger<HandleSearchTitlesInline> _logger;
+
+    public HandleSearchTitlesInline(
+        Bot bot,
+        DataContext context,
+        BotMessages messages,
+        ILogger<HandleSearchTitlesInline> logger)
     {
-        private readonly WTelegram.Bot _bot;
-        private readonly DataContext _context;
-        private readonly BotMessages _messages;
-        private readonly ILogger<HandleSearchTitlesInline> _logger;
+        _logger = logger;
+        _messages = messages;
+        _bot = bot;
+        _context = context;
+    }
 
-        public HandleSearchTitlesInline(
-            WTelegram.Bot bot,
-            DataContext context,
-            BotMessages messages,
-            ILogger<HandleSearchTitlesInline> logger)
+    public async Task Search(TL.UpdateBotInlineQuery inlineQuery)
+    {
+        var results = await _context.OmdbItems
+            .Where(x => EF.Functions.Like(x.Title, $"{inlineQuery.query}%") || x.ImdbId == inlineQuery.query)
+            .Include(x => x.Tags)
+            .OrderByDescending(x => x.ImdbVotes)
+            .Take(20)
+            .ToListAsync();
+
+        var response = new List<InlineQueryResult>();
+
+        foreach (var item in results)
         {
-            _logger = logger;
-            _messages = messages;
-            _bot = bot;
-            _context = context;
-        }
-
-        public async Task Search(TL.UpdateBotInlineQuery inlineQuery)
-        {
-            var results = await _context.OmdbItems
-                .Where(x => EF.Functions.Like(x.Title, $"{inlineQuery.query}%") || x.ImdbId == inlineQuery.query)
-                .Include(x => x.Tags)
-                .OrderByDescending(x => x.ImdbVotes)
-                .Take(20)
-                .ToListAsync();
-
-            var response = new List<InlineQueryResult>();
-
-            foreach (var item in results)
+            var year = "";
+            if (item.Year is > 0)
             {
-                string year = "";
-                if (item.Year is > 0)
-                {
-                    year = item.Year.Value.ToString();
-                }
-                else
-                {
-                    var dateString = item.Released;
-                    const string dateFormat = "dd MMM yyyy";
-                    var date = DateTime.TryParseExact(dateString, dateFormat, CultureInfo.InvariantCulture,
-                        DateTimeStyles.None, out var parsed);
-                    year = parsed.Year.ToString();
-                }
-
-
-                var qr = new InlineQueryResultArticle
-                {
-                    Id = item.ImdbId,
-                    Description = MessageGeneratorHelper.E(
-                        StringUtilities.TruncateAtWord(item.PlotFa, 50)
-                    ),
-                    Title = $"{item.Title} {year}",
-                    ThumbnailUrl = item.Poster,
-                    InputMessageContent = GenerateDescription(item),
-                    // ReplyMarkup = new InlineKeyboardMarkup(new List<InlineKeyboardButton>()
-                    // {
-                    //     new InlineKeyboardButton {
-                    //         Text = _messages.CallbackButtons.MoreInfo,
-                    //         CallbackData = CallbackDataSerializer.(item.ImdbId)
-                    //     },
-                    // })
-                };
-                response.Add(qr);
+                year = item.Year.Value.ToString();
+            }
+            else
+            {
+                var dateString = item.Released;
+                const string dateFormat = "dd MMM yyyy";
+                var date = DateTime.TryParseExact(dateString, dateFormat, CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var parsed);
+                year = parsed.Year.ToString();
             }
 
-            try
+
+            var qr = new InlineQueryResultArticle
             {
-                await _bot.AnswerInlineQuery(inlineQuery.query_id.ToString(), response, 0);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to answer inline query with Telegram bot");
-            }
-        }
-
-        private InputTextMessageContent GenerateDescription(OmdbItem item)
-        {
-            var imdbUrl = StringUtilities.GetIMDbURL(item.ImdbId);
-
-            var yearPart = item.Year > 0 ? $" {item.Year}" : string.Empty;
-            var typePart = item.Type == Domain.Enums.OmdbItemType.Movie
-                ? _messages.Common.Movie
-                : _messages.Common.Series;
-
-            var titleTxt = $"{item.Title}{yearPart} ({typePart})";
-
-            var sb = new StringBuilder();
-
-            // Title + IMDb link
-            sb.AppendLine(
-                $@"🎬 <a href=""{MessageGeneratorHelper.E(imdbUrl)}""><b>{MessageGeneratorHelper.E(titleTxt)}</b></a>");
-
-            // Ratings
-            var ratingParts = new List<string>();
-            if (item.ImdbRating is > 0)
-                ratingParts.Add(
-                    $"⭐ <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Imdb)}</b>: {item.ImdbRating:F1} ({item.ImdbVotes})");
-
-            if (item.RottenTomatoesScore is > 0)
-                ratingParts.Add(
-                    $"🍅 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Rotten)}</b>: {item.RottenTomatoesScore}");
-
-            if (item.Metascore is > 0)
-                ratingParts.Add(
-                    $"📊 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Metascore)}</b>: {item.Metascore}");
-
-            if (ratingParts.Count != 0)
-            {
-                sb.AppendLine();
-                sb.AppendLine(string.Join("\n", ratingParts));
-            }
-
-            // Genres
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏷️", _messages.InlineQuerySearchResponse.Genres,
-                MessageGeneratorHelper.JoinOrEmpty(item.Genres));
-
-            // Actors
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎭", _messages.InlineQuerySearchResponse.Actors,
-                MessageGeneratorHelper.JoinOrEmpty(item.Actors));
-
-            // Directors
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎬", _messages.InlineQuerySearchResponse.Directors,
-                MessageGeneratorHelper.JoinOrEmpty(item.Directors));
-
-            // Writers
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "✍️", _messages.InlineQuerySearchResponse.Writers,
-                MessageGeneratorHelper.JoinOrEmpty(item.Writers));
-
-            // Plot
-            var plotRaw = StringUtilities.TruncateAtWord(item.PlotFa ?? item.Plot, 300) ?? "";
-            if (!string.IsNullOrWhiteSpace(plotRaw))
-            {
-                sb.AppendLine();
-                sb.AppendLine($"📖 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Plot)}</b>:");
-                sb.AppendLine($"- {MessageGeneratorHelper.E(plotRaw)}");
-                sb.AppendLine();
-            }
-
-            // Languages
-            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🗣️", _messages.InlineQuerySearchResponse.Languages,
-                MessageGeneratorHelper.JoinOrEmpty(item.Languages)?.Replace(",", ", "));
-
-            // BoxOffice
-            if (MessageGeneratorHelper.HasValue(item.BoxOffice))
-                sb.AppendLine(
-                    $"💰 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.BoxOffice)}</b>: {MessageGeneratorHelper.E(item.BoxOffice)}");
-
-            // Awards
-            if (MessageGeneratorHelper.HasValue(item.Awards))
-                MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏆", _messages.InlineQuerySearchResponse.Awards,
-                    item.Awards);
-
-            sb.AppendLine();
-            sb.AppendLine($"🔎 <i>IMDb</i> • <code>{item.ImdbId}</code>");
-
-            return new InputTextMessageContent(sb.ToString().TrimEnd())
-            {
-                ParseMode = ParseMode.Html
+                Id = item.ImdbId,
+                Description = MessageGeneratorHelper.E(
+                    StringUtilities.TruncateAtWord(item.PlotFa, 50)
+                ),
+                Title = $"{item.Title} {year}",
+                ThumbnailUrl = item.Poster,
+                InputMessageContent = GenerateDescription(item)
+                // ReplyMarkup = new InlineKeyboardMarkup(new List<InlineKeyboardButton>()
+                // {
+                //     new InlineKeyboardButton {
+                //         Text = _messages.CallbackButtons.MoreInfo,
+                //         CallbackData = CallbackDataSerializer.(item.ImdbId)
+                //     },
+                // })
             };
+            response.Add(qr);
         }
+
+        try
+        {
+            await _bot.AnswerInlineQuery(inlineQuery.query_id.ToString(), response, 0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to answer inline query with Telegram bot");
+        }
+    }
+
+    private InputTextMessageContent GenerateDescription(OmdbItem item)
+    {
+        var imdbUrl = StringUtilities.GetIMDbURL(item.ImdbId);
+
+        var yearPart = item.Year > 0 ? $" {item.Year}" : string.Empty;
+        var typePart = item.Type == Domain.Enums.OmdbItemType.Movie
+            ? _messages.Common.Movie
+            : _messages.Common.Series;
+
+        var titleTxt = $"{item.Title}{yearPart} ({typePart})";
+
+        var sb = new StringBuilder();
+
+        // Title + IMDb link
+        sb.AppendLine(
+            $@"🎬 <a href=""{MessageGeneratorHelper.E(imdbUrl)}""><b>{MessageGeneratorHelper.E(titleTxt)}</b></a>");
+
+        // Ratings
+        var ratingParts = new List<string>();
+        if (item.ImdbRating is > 0)
+            ratingParts.Add(
+                $"⭐ <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Imdb)}</b>: {item.ImdbRating:F1} ({item.ImdbVotes})");
+
+        if (item.RottenTomatoesScore is > 0)
+            ratingParts.Add(
+                $"🍅 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Rotten)}</b>: {item.RottenTomatoesScore}");
+
+        if (item.Metascore is > 0)
+            ratingParts.Add(
+                $"📊 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Scores.Metascore)}</b>: {item.Metascore}");
+
+        if (ratingParts.Count != 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine(string.Join("\n", ratingParts));
+        }
+
+        // Genres
+        MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏷️", _messages.InlineQuerySearchResponse.Genres,
+            MessageGeneratorHelper.JoinOrEmpty(item.Genres));
+
+        // Actors
+        MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎭", _messages.InlineQuerySearchResponse.Actors,
+            MessageGeneratorHelper.JoinOrEmpty(item.Actors));
+
+        // Directors
+        MessageGeneratorHelper.AppendIfNotEmpty(sb, "🎬", _messages.InlineQuerySearchResponse.Directors,
+            MessageGeneratorHelper.JoinOrEmpty(item.Directors));
+
+        // Writers
+        MessageGeneratorHelper.AppendIfNotEmpty(sb, "✍️", _messages.InlineQuerySearchResponse.Writers,
+            MessageGeneratorHelper.JoinOrEmpty(item.Writers));
+
+        // Plot
+        var plotRaw = StringUtilities.TruncateAtWord(item.PlotFa ?? item.Plot, 300) ?? "";
+        if (!string.IsNullOrWhiteSpace(plotRaw))
+        {
+            sb.AppendLine();
+            sb.AppendLine($"📖 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.Plot)}</b>:");
+            sb.AppendLine($"- {MessageGeneratorHelper.E(plotRaw)}");
+            sb.AppendLine();
+        }
+
+        // Languages
+        MessageGeneratorHelper.AppendIfNotEmpty(sb, "🗣️", _messages.InlineQuerySearchResponse.Languages,
+            MessageGeneratorHelper.JoinOrEmpty(item.Languages)?.Replace(",", ", "));
+
+        // BoxOffice
+        if (MessageGeneratorHelper.HasValue(item.BoxOffice))
+            sb.AppendLine(
+                $"💰 <b>{MessageGeneratorHelper.E(_messages.InlineQuerySearchResponse.BoxOffice)}</b>: {MessageGeneratorHelper.E(item.BoxOffice)}");
+
+        // Awards
+        if (MessageGeneratorHelper.HasValue(item.Awards))
+            MessageGeneratorHelper.AppendIfNotEmpty(sb, "🏆", _messages.InlineQuerySearchResponse.Awards,
+                item.Awards);
+
+        sb.AppendLine();
+        sb.AppendLine($"🔎 <i>IMDb</i> • <code>{item.ImdbId}</code>");
+
+        return new InputTextMessageContent(sb.ToString().TrimEnd())
+        {
+            ParseMode = ParseMode.Html
+        };
     }
 }

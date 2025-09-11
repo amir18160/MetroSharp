@@ -1,8 +1,7 @@
-namespace Domain.Enums
+namespace Domain.Enums;
+
+public enum EmailPurpose
 {
-    public enum EmailPurpose
-    {
-        Confirmation,
-        PasswordReset
-    }
+    Confirmation,
+    PasswordReset
 }

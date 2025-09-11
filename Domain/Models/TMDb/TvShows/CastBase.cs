@@ -1,35 +1,32 @@
-﻿
-using Domain.Models.TMDb.People;
+﻿using Domain.Models.TMDb.People;
 
-namespace Domain.Models.TMDb.TvShows
+namespace Domain.Models.TMDb.TvShows;
+
+public class CastBase
 {
-    public class CastBase
-    {
-        
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        
-        public string Name { get; set; }
 
-        
-        public int Order { get; set; }
+    public string Name { get; set; }
 
-        
-        public string ProfilePath { get; set; }
 
-        
-        public PersonGender Gender { get; set; }
+    public int Order { get; set; }
 
-        
-        public bool Adult { get; set; }
 
-        
-        public string KnownForDepartment { get; set; }
+    public string ProfilePath { get; set; }
 
-        
-        public string OriginalName { get; set; }
 
-        
-        public float Popularity { get; set; }
-    }
+    public PersonGender Gender { get; set; }
+
+
+    public bool Adult { get; set; }
+
+
+    public string KnownForDepartment { get; set; }
+
+
+    public string OriginalName { get; set; }
+
+
+    public float Popularity { get; set; }
 }

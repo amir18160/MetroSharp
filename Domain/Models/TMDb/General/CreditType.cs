@@ -1,15 +1,12 @@
-﻿
+﻿namespace Domain.Models.TMDb.General;
 
-namespace Domain.Models.TMDb.General
+public enum CreditType
 {
-    public enum CreditType
-    {
-        Unknown,
+    Unknown,
 
 
-        Crew = 1,
+    Crew = 1,
 
 
-        Cast = 2
-    }
+    Cast = 2
 }

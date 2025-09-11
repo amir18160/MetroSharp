@@ -1,31 +1,29 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Persistence;
 
-namespace Infrastructure.Security
+namespace Infrastructure.Security;
+
+public class SameUserRequirement : IAuthorizationRequirement
 {
-    public class SameUserRequirement : IAuthorizationRequirement { }
-    public class SameUserHandler : AuthorizationHandler<SameUserRequirement>
+}
+
+public class SameUserHandler : AuthorizationHandler<SameUserRequirement>
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+
+    public SameUserHandler(IHttpContextAccessor httpContextAccessor)
     {
-        private readonly IHttpContextAccessor _httpContextAccessor;
+        _httpContextAccessor = httpContextAccessor;
+    }
 
-        public SameUserHandler(IHttpContextAccessor httpContextAccessor)
-        {
-            _httpContextAccessor = httpContextAccessor;
-        }
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, SameUserRequirement requirement)
+    {
+        var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var routeUserId = _httpContextAccessor.HttpContext?.Request.RouteValues["id"]?.ToString();
 
-        protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, SameUserRequirement requirement)
-        {
-            var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var routeUserId = _httpContextAccessor.HttpContext?.Request.RouteValues["id"]?.ToString();
+        if (userId != null && userId == routeUserId) context.Succeed(requirement);
 
-            if (userId != null && userId == routeUserId)
-            {
-                context.Succeed(requirement);
-            }
-
-            return Task.CompletedTask;
-        }
+        return Task.CompletedTask;
     }
 }

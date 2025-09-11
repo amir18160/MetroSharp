@@ -1,16 +1,12 @@
-﻿
+﻿namespace Domain.Models.TMDb.TvShows;
 
-namespace Domain.Models.TMDb.TvShows
+public enum TvShowListType
 {
-    public enum TvShowListType
-    {
-      
-        OnTheAir,
-       
-        AiringToday,
-   
-        TopRated,
-       
-        Popular
-    }
+    OnTheAir,
+
+    AiringToday,
+
+    TopRated,
+
+    Popular
 }

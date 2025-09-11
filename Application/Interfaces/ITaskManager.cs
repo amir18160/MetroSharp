@@ -1,11 +1,10 @@
 using Application.Core;
 using MediatR;
 
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface ITaskManager
 {
-    public interface ITaskManager
-    {
-        Task<Result<Unit>> CancelTaskAsync(Guid taskId, CancellationToken cancellationToken = default);
-        Task<Result<Unit>> RetryTaskAsync(Guid taskId, CancellationToken cancellationToken = default);
-    }
+    Task<Result<Unit>> CancelTaskAsync(Guid taskId, CancellationToken cancellationToken = default);
+    Task<Result<Unit>> RetryTaskAsync(Guid taskId, CancellationToken cancellationToken = default);
 }

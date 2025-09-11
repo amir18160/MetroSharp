@@ -1,9 +1,8 @@
 using Application.Dashboard.Queries.GetSystemInfo;
 
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface ISystemInfoService
 {
-    public interface ISystemInfoService
-    {
-        Task<SystemInfoDto> GetSystemInfoAsync();
-    }
+    Task<SystemInfoDto> GetSystemInfoAsync();
 }

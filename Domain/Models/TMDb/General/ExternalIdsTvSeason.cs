@@ -1,9 +1,6 @@
+namespace Domain.Models.TMDb.General;
 
-
-namespace Domain.Models.TMDb.General
+public class ExternalIdsTvSeason : ExternalIds
 {
-    public class ExternalIdsTvSeason : ExternalIds
-    {
-        public string TvdbId { get; set; }
-    }
+    public string TvdbId { get; set; }
 }

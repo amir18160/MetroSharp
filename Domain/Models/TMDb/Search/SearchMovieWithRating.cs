@@ -1,7 +1,6 @@
-﻿namespace Domain.Models.TMDb.Search
+﻿namespace Domain.Models.TMDb.Search;
+
+public class SearchMovieWithRating : SearchMovie
 {
-    public class SearchMovieWithRating : SearchMovie
-    {
-        public double Rating { get; set; }
-    }
+    public double Rating { get; set; }
 }

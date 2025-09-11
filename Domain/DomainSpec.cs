@@ -1,22 +1,18 @@
 using System.Reflection;
 using TypeGen.Core.SpecGeneration;
 
-namespace Domain
+namespace Domain;
+
+public class DomainSpec : GenerationSpec
 {
-    public class DomainSpec : GenerationSpec
+    public DomainSpec()
     {
-        public DomainSpec()
-        {
-            var assembly = Assembly.GetExecutingAssembly();
+        var assembly = Assembly.GetExecutingAssembly();
 
-            var modelTypes = assembly.GetTypes()
-                .Where(t => t.IsClass && t.IsPublic && t.Namespace != null &&
-                            t.Namespace.StartsWith("Domain.Models.Scrapers"));
+        var modelTypes = assembly.GetTypes()
+            .Where(t => t.IsClass && t.IsPublic && t.Namespace != null &&
+                        t.Namespace.StartsWith("Domain.Models.Scrapers"));
 
-            foreach (var type in modelTypes)
-            {
-                AddClass(type);
-            }
-        }
+        foreach (var type in modelTypes) AddClass(type);
     }
 }

@@ -22,10 +22,7 @@ try
             .ReadFrom.Services(services)
             .Enrich.FromLogContext();
 
-        if (context.HostingEnvironment.IsDevelopment())
-        {
-            configuration.WriteTo.Console();
-        }
+        if (context.HostingEnvironment.IsDevelopment()) configuration.WriteTo.Console();
     });
 
     builder.Services.AddControllers();

@@ -1,43 +1,44 @@
 using Domain.Models.TelegramBot.Messages;
 using Telegram.Bot.Types.InlineQueryResults;
 
-namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery
+namespace Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
+
+public class InlineQueryHandler
 {
-    public class InlineQueryHandler
+    private readonly BotMessages _messages;
+    private readonly WTelegram.Bot _bot;
+    private readonly HandleSearchTitlesInline _handleSearchTitles;
+    private readonly string DefaultImageURL = "https://images.unsplash.com/photo-1440404653325-ab127d49abc1";
+
+    public InlineQueryHandler(BotMessages messages, WTelegram.Bot bot, HandleSearchTitlesInline handleSearchTitles)
     {
-        private readonly BotMessages _messages;
-        private readonly WTelegram.Bot _bot;
-        private readonly HandleSearchTitlesInline _handleSearchTitles;
-        private readonly string DefaultImageURL = "https://images.unsplash.com/photo-1440404653325-ab127d49abc1";
-        public InlineQueryHandler(BotMessages messages, WTelegram.Bot bot, HandleSearchTitlesInline handleSearchTitles)
+        _handleSearchTitles = handleSearchTitles;
+        _bot = bot;
+        _messages = messages;
+    }
+
+    public async Task HandleInlineRequest(TL.UpdateBotInlineQuery inlineQuery)
+    {
+        if (string.IsNullOrWhiteSpace(inlineQuery.query))
         {
-            _handleSearchTitles = handleSearchTitles;
-            _bot = bot;
-            _messages = messages;
+            await HandleEmptyInlineQuery(inlineQuery);
+            return;
         }
 
-        public async Task HandleInlineRequest(TL.UpdateBotInlineQuery inlineQuery)
+        await _handleSearchTitles.Search(inlineQuery);
+    }
+
+    public async Task HandleEmptyInlineQuery(TL.UpdateBotInlineQuery inlineQuery)
+    {
+        var defaultResponse = new List<InlineQueryResult>
         {
-            if (string.IsNullOrWhiteSpace(inlineQuery.query))
+            new InlineQueryResultArticle("default_result", _messages.InlineQueryMessages.TypeToSearch,
+                new InputTextMessageContent(_messages.InlineQueryMessages.TypeToSearchContent))
             {
-                await HandleEmptyInlineQuery(inlineQuery);
-                return;
+                ThumbnailUrl = DefaultImageURL
             }
+        };
 
-            await _handleSearchTitles.Search(inlineQuery);
-        }
-
-        public async Task HandleEmptyInlineQuery(TL.UpdateBotInlineQuery inlineQuery)
-        {
-            var defaultResponse = new List<InlineQueryResult>()
-            {
-                new InlineQueryResultArticle("default_result", _messages.InlineQueryMessages.TypeToSearch, new InputTextMessageContent(_messages.InlineQueryMessages.TypeToSearchContent))
-                {
-                    ThumbnailUrl = DefaultImageURL
-                }
-            };
-
-            await _bot.AnswerInlineQuery(inlineQuery.query_id.ToString(), defaultResponse);       
-        }
+        await _bot.AnswerInlineQuery(inlineQuery.query_id.ToString(), defaultResponse);
     }
 }

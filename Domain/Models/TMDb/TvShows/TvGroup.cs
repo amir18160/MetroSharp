@@ -1,22 +1,18 @@
-﻿
+﻿namespace Domain.Models.TMDb.TvShows;
 
-namespace Domain.Models.TMDb.TvShows
+public class TvGroup
 {
-    public class TvGroup
-    {
-        
-        public string Id { get; set; }
+    public string Id { get; set; }
 
-        
-        public string Name { get; set; }
 
-        
-        public int Order { get; set; }
+    public string Name { get; set; }
 
-        
-        public List<TvGroupEpisode> Episodes { get; set; }
 
-        
-        public bool Locked { get; set; }
-    }
+    public int Order { get; set; }
+
+
+    public List<TvGroupEpisode> Episodes { get; set; }
+
+
+    public bool Locked { get; set; }
 }

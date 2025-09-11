@@ -1,13 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+namespace Application.Interfaces;
 
-namespace Application.Interfaces
+public interface IUtilitiesFacade
 {
-    public interface IUtilitiesFacade
-    {
-        string GetMagnetHash(string magnet);
-
-    }
+    string GetMagnetHash(string magnet);
 }

@@ -1,13 +1,12 @@
 using FluentValidation;
 
-namespace Application.TMDb.Queries.SearchMulti
+namespace Application.TMDb.Queries.SearchMulti;
+
+public class Validator : AbstractValidator<Query>
 {
-    public class Validator: AbstractValidator<Query>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.SearchQuery)
-                .NotEmpty();
-        }
+        RuleFor(x => x.SearchQuery)
+            .NotEmpty();
     }
 }

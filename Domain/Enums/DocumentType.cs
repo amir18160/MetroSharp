@@ -1,8 +1,7 @@
-namespace Domain.Enums
+namespace Domain.Enums;
+
+public enum DocumentType
 {
-    public enum DocumentType
-    {
-        Movie,
-        Episode
-    }
+    Movie,
+    Episode
 }

@@ -2,120 +2,118 @@ using AngleSharp.Dom;
 using Domain.Models.Scrapers.Sub2fm;
 using Infrastructure.Scrapers.Core;
 
-namespace Infrastructure.Scrapers.Sites
+namespace Infrastructure.Scrapers.Sites;
+
+public class SubF2mScraper : ScraperBase
 {
-    public class SubF2mScraper : ScraperBase
+    private const string _baseUrl = "https://subf2m.co";
+
+    /**********************
+        Public Methods
+    **********************/
+
+    public static async Task<List<SubF2mSubtitleSearchResult>> SearchSubtitleAsync(string query)
     {
-        private const string _baseUrl = "https://subf2m.co";
+        var url = BuildSearchUrl(query);
 
-        /**********************
-            Public Methods
-        **********************/
-
-        public static async Task<List<SubF2mSubtitleSearchResult>> SearchSubtitleAsync(string query)
+        IDocument document;
+        try
         {
-            var url = BuildSearchUrl(query);
-
-            IDocument document;
-            try
-            {
-                document = await AngleSharpGetDocumentAsync(url);
-                return ParseSearchResults(document);
-            }
-            catch
-            {
-                return [];
-            }
-
+            document = await AngleSharpGetDocumentAsync(url);
+            return ParseSearchResults(document);
         }
-
-        public static async Task<List<SubF2mSubtitleDetail>> GetSubtitlesAsync(string url, string language = "", bool slugBased = false)
+        catch
         {
-            var resolvedUrl = BuildSubtitlesUrl(url, language, slugBased);
-
-            IDocument document;
-            try
-            {
-                document = await AngleSharpGetDocumentAsync(resolvedUrl);
-            }
-            catch
-            {
-                return new();
-            }
-
-            return ParseSubtitleDetails(document);
+            return [];
         }
+    }
 
-        public static async Task<SubF2SubtitleDownload> GetDownloadLinkAsync(string url, string language = "", bool slugBased = false, string id = "")
+    public static async Task<List<SubF2mSubtitleDetail>> GetSubtitlesAsync(string url, string language = "",
+        bool slugBased = false)
+    {
+        var resolvedUrl = BuildSubtitlesUrl(url, language, slugBased);
+
+        IDocument document;
+        try
         {
-
-            var resolvedUrl = BuildDownloadUrl(url, language, slugBased, id);
-
-            IDocument document;
-           
             document = await AngleSharpGetDocumentAsync(resolvedUrl);
-
-            return ParseDownloadLink(document);
+        }
+        catch
+        {
+            return new List<SubF2mSubtitleDetail>();
         }
 
-        /**********************
-            Private Helpers
-        **********************/
+        return ParseSubtitleDetails(document);
+    }
 
-        private static string BuildSearchUrl(string query)
+    public static async Task<SubF2SubtitleDownload> GetDownloadLinkAsync(string url, string language = "",
+        bool slugBased = false, string id = "")
+    {
+        var resolvedUrl = BuildDownloadUrl(url, language, slugBased, id);
+
+        IDocument document;
+
+        document = await AngleSharpGetDocumentAsync(resolvedUrl);
+
+        return ParseDownloadLink(document);
+    }
+
+    /**********************
+        Private Helpers
+    **********************/
+
+    private static string BuildSearchUrl(string query)
+    {
+        var formatted = query.Replace(" ", "+");
+        return $"{_baseUrl}/subtitles/searchbytitle?query={formatted}";
+    }
+
+    private static string BuildSubtitlesUrl(string url, string language, bool slugBased)
+    {
+        if (slugBased)
+            url = $"{_baseUrl}/subtitles/{url}";
+
+        language = language switch
         {
-            var formatted = query.Replace(" ", "+");
-            return $"{_baseUrl}/subtitles/searchbytitle?query={formatted}";
-        }
+            "fa" or "per" or "" => "farsi_persian",
+            "en" => "english",
+            _ => language
+        };
 
-        private static string BuildSubtitlesUrl(string url, string language, bool slugBased)
-        {
-            if (slugBased)
-                url = $"{_baseUrl}/subtitles/{url}";
+        return $"{url}/{language}";
+    }
 
-            language = language switch
+    private static string BuildDownloadUrl(string url, string language, bool slugBased, string id)
+    {
+        if (slugBased && !string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(language))
+            return $"{_baseUrl}/subtitles/{url}/{language}/{id}";
+
+        return url;
+    }
+
+    private static List<SubF2mSubtitleSearchResult> ParseSearchResults(IDocument document)
+    {
+        var items = document.QuerySelectorAll(".search-result ul li");
+
+        return items
+            .Select(item => item.QuerySelector("a"))
+            .Where(anchor => anchor != null)
+            .Select(anchor => new SubF2mSubtitleSearchResult
             {
-                "fa" or "per" or "" => "farsi_persian",
-                "en" => "english",
-                _ => language
-            };
+                Title = anchor.TextContent.Trim(),
+                Url = _baseUrl + anchor.GetAttribute("href")
+            })
+            .ToList();
+    }
 
-            return $"{url}/{language}";
-        }
+    private static List<SubF2mSubtitleDetail> ParseSubtitleDetails(IDocument document)
+    {
+        var container = document.QuerySelector(".sublist.larglist");
+        if (container == null) return new List<SubF2mSubtitleDetail>();
 
-        private static string BuildDownloadUrl(string url, string language, bool slugBased, string id)
-        {
-            if (slugBased && !string.IsNullOrWhiteSpace(id) && !string.IsNullOrWhiteSpace(language))
-            {
-                return $"{_baseUrl}/subtitles/{url}/{language}/{id}";
-            }
+        var items = container.QuerySelectorAll("li.item");
 
-            return url;
-        }
-
-        private static List<SubF2mSubtitleSearchResult> ParseSearchResults(IDocument document)
-        {
-            var items = document.QuerySelectorAll(".search-result ul li");
-
-            return items
-                .Select(item => item.QuerySelector("a"))
-                .Where(anchor => anchor != null)
-                .Select(anchor => new SubF2mSubtitleSearchResult
-                {
-                    Title = anchor.TextContent.Trim(),
-                    Url = _baseUrl + anchor.GetAttribute("href")
-                })
-                .ToList();
-        }
-
-        private static List<SubF2mSubtitleDetail> ParseSubtitleDetails(IDocument document)
-        {
-            var container = document.QuerySelector(".sublist.larglist");
-            if (container == null) return new();
-
-            var items = container.QuerySelectorAll("li.item");
-
-            return items.Select(item =>
+        return items.Select(item =>
             {
                 var downloadAnchor = item.QuerySelector("a.download.icon-download");
                 if (downloadAnchor == null) return null;
@@ -124,8 +122,8 @@ namespace Infrastructure.Scrapers.Sites
                 var description = item.QuerySelector(".comment-col p")?.TextContent?.Trim();
 
                 var nameList = item.QuerySelectorAll(".col-info .scrolllist li")
-                                   .Select(li => li.TextContent.Trim())
-                                   .ToList();
+                    .Select(li => li.TextContent.Trim())
+                    .ToList();
 
                 return new SubF2mSubtitleDetail
                 {
@@ -137,17 +135,16 @@ namespace Infrastructure.Scrapers.Sites
             })
             .Where(detail => detail != null)
             .ToList();
-        }
+    }
 
-        private static SubF2SubtitleDownload ParseDownloadLink(IDocument document)
+    private static SubF2SubtitleDownload ParseDownloadLink(IDocument document)
+    {
+        var anchor = document.QuerySelector(".download a#downloadButton");
+        if (anchor == null) return null;
+
+        return new SubF2SubtitleDownload
         {
-            var anchor = document.QuerySelector(".download a#downloadButton");
-            if (anchor == null) return null;
-
-            return new SubF2SubtitleDownload
-            {
-                DownloadUrl = _baseUrl + anchor.GetAttribute("href")
-            };
-        }
+            DownloadUrl = _baseUrl + anchor.GetAttribute("href")
+        };
     }
 }

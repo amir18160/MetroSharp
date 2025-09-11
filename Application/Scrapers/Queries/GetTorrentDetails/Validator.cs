@@ -1,13 +1,12 @@
 using FluentValidation;
 
-namespace Application.Scrapers.Queries.GetTorrentDetails
+namespace Application.Scrapers.Queries.GetTorrentDetails;
+
+public class Validator : AbstractValidator<Query>
 {
-    public class Validator: AbstractValidator<Query>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.Source)
-                .NotEmpty();
-        }
+        RuleFor(x => x.Source)
+            .NotEmpty();
     }
 }

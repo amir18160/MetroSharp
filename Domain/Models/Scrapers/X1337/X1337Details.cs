@@ -1,13 +1,12 @@
-namespace Domain.Models.Scrapers.X1337
+namespace Domain.Models.Scrapers.X1337;
+
+public class X1337Details
 {
-    public class X1337Details
-    {
-        public string Name { get; set; }
-        public string Seeds { get; set; }
-        public string Leeches { get; set; }
-        public string Magnet { get; set; }
-        public string Image { get; set; }
-        public string ImdbRef { get; set; }
-        public string Size { get; set; }
-    }
+    public string Name { get; set; }
+    public string Seeds { get; set; }
+    public string Leeches { get; set; }
+    public string Magnet { get; set; }
+    public string Image { get; set; }
+    public string ImdbRef { get; set; }
+    public string Size { get; set; }
 }

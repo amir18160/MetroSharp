@@ -1,9 +1,8 @@
-﻿namespace Domain.Models.TMDb.Movies
-{
-    public class SpokenLanguage
-    {
-        public string Iso_639_1 { get; set; }
+﻿namespace Domain.Models.TMDb.Movies;
 
-        public string Name { get; set; }
-    }
+public class SpokenLanguage
+{
+    public string Iso_639_1 { get; set; }
+
+    public string Name { get; set; }
 }

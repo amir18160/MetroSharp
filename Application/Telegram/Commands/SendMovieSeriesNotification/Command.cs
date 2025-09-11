@@ -2,10 +2,9 @@
 using Domain.Models.TelegramBot.ManuelMessages;
 using MediatR;
 
-namespace Application.Telegram.Commands.SendMovieSeriesNotification
+namespace Application.Telegram.Commands.SendMovieSeriesNotification;
+
+public class Command : IRequest<Result<Unit>>
 {
-    public class Command : IRequest<Result<Unit>>
-    {
-        public MovieSeriesNotificationParams NotificationParams { get; set; }
-    }
+    public MovieSeriesNotificationParams NotificationParams { get; set; }
 }

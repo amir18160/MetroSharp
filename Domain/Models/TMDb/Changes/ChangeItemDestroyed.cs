@@ -1,15 +1,12 @@
-﻿
+﻿namespace Domain.Models.TMDb.Changes;
 
-namespace Domain.Models.TMDb.Changes
+public class ChangeItemDestroyed : ChangeItemBase
 {
-    public class ChangeItemDestroyed : ChangeItemBase
+    public ChangeItemDestroyed()
     {
-        public ChangeItemDestroyed()
-        {
-            Action = ChangeAction.Destroyed;
-        }
-
-        
-        public object Value { get; set; }
+        Action = ChangeAction.Destroyed;
     }
+
+
+    public object Value { get; set; }
 }

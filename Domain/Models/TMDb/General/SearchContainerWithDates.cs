@@ -1,9 +1,6 @@
+namespace Domain.Models.TMDb.General;
 
-namespace Domain.Models.TMDb.General
+public class SearchContainerWithDates<T> : SearchContainer<T>
 {
-    public class SearchContainerWithDates<T> : SearchContainer<T>
-    {
-
-        public DateRange Dates { get; set; }
-    }
+    public DateRange Dates { get; set; }
 }

@@ -1,9 +1,6 @@
+namespace Domain.Models.TMDb.TvShows;
 
-
-namespace Domain.Models.TMDb.TvShows
+public class TvEpisodeAccountStateWithNumber : TvEpisodeAccountState
 {
-    public class TvEpisodeAccountStateWithNumber : TvEpisodeAccountState
-    {
-        public int EpisodeNumber { get; set; }
-    }
+    public int EpisodeNumber { get; set; }
 }

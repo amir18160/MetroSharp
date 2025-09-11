@@ -3,7 +3,7 @@
  * Any changes made to this file can be lost when this file is regenerated.
  */
 
-import { YtsTorrent } from "./yts-torrent";
+import {YtsTorrent} from "./yts-torrent";
 
 export class YtsDetails {
     title: string;

@@ -1,7 +1,6 @@
-﻿namespace Domain.Models.TMDb.Timezones
+﻿namespace Domain.Models.TMDb.Timezones;
+
+public class Timezones
 {
-    public class Timezones
-    {
-        public Dictionary<string, List<string>> List { get; set; }
-    }
+    public Dictionary<string, List<string>> List { get; set; }
 }

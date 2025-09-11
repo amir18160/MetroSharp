@@ -1,9 +1,8 @@
 ﻿using Domain.Models.TelegramBot.ManuelMessages;
 
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface ITelegramManuelMessages
 {
-    public interface ITelegramManuelMessages
-    {
-        public Task SendMovieSeriesNotificationPost(MovieSeriesNotificationParams @params);
-    }
+    public Task SendMovieSeriesNotificationPost(MovieSeriesNotificationParams @params);
 }

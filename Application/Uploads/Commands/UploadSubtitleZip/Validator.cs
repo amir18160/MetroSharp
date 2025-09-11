@@ -1,17 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using FluentValidation;
 
-namespace Application.Uploads.Commands.UploadSubtitleZip
+namespace Application.Uploads.Commands.UploadSubtitleZip;
+
+public class Validator : AbstractValidator<Command>
 {
-    public class Validator : AbstractValidator<Command>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.File)
-                .NotEmpty();
-        }
+        RuleFor(x => x.File)
+            .NotEmpty();
     }
 }

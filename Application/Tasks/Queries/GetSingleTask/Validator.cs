@@ -1,12 +1,11 @@
 using FluentValidation;
 
-namespace Application.Tasks.Queries.GetSingleTask
+namespace Application.Tasks.Queries.GetSingleTask;
+
+public class Validator : AbstractValidator<Query>
 {
-    public class Validator : AbstractValidator<Query>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.Id).NotEmpty();
-        }
+        RuleFor(x => x.Id).NotEmpty();
     }
 }

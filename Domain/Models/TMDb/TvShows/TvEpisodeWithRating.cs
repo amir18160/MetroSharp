@@ -1,7 +1,6 @@
-﻿namespace Domain.Models.TMDb.TvShows
+﻿namespace Domain.Models.TMDb.TvShows;
+
+public class TvEpisodeWithRating : TvEpisode
 {
-    public class TvEpisodeWithRating : TvEpisode
-    {
-        public double Rating { get; set; }
-    }
+    public double Rating { get; set; }
 }

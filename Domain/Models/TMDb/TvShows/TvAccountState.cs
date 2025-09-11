@@ -1,10 +1,6 @@
-﻿
+﻿namespace Domain.Models.TMDb.TvShows;
 
-namespace Domain.Models.TMDb.TvShows
+public class TvAccountState
 {
-    public class TvAccountState
-    {
-        
-        public double? Rating { get; set; }
-    }
+    public double? Rating { get; set; }
 }

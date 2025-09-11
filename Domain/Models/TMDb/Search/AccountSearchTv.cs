@@ -1,10 +1,6 @@
+namespace Domain.Models.TMDb.Search;
 
-
-namespace Domain.Models.TMDb.Search
+public class AccountSearchTv : SearchTv
 {
-    public class AccountSearchTv : SearchTv
-    {
-        
-        public float Rating { get; set; }
-    }
+    public float Rating { get; set; }
 }

@@ -1,0 +1,5 @@
+﻿# do these steps in order to avoid any problem:
+
+- run "1_requirements.h" and make sure it was succeeded
+- get an api key from prowlarr in put in appsettings.json
+- run "2_manage_api.h"

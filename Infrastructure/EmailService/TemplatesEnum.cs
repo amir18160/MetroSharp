@@ -1,8 +1,7 @@
-namespace Infrastructure.EmailService
+namespace Infrastructure.EmailService;
+
+public enum TemplatesEnum
 {
-    public enum TemplatesEnum
-    {
-        Confirmation,
-        PasswordReset
-    }
+    Confirmation,
+    PasswordReset
 }

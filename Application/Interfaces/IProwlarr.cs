@@ -1,8 +1,9 @@
-namespace Application.Interfaces
+using Domain.Models.Prowlarr;
+
+namespace Application.Interfaces;
+
+public interface IProwlarr
 {
-    public interface IProwlarr
-    {
-        Task<List<Domain.Models.Prowlarr.Indexer>> GetIndexersAsync();
-        Task<List<Domain.Models.Prowlarr.SearchResult>> Search(Domain.Models.Prowlarr.SearchOptions options);
-    }
+    Task<List<Domain.Models.Prowlarr.Indexer>> GetIndexersAsync();
+    Task<List<SearchResult>> Search(SearchOptions options);
 }

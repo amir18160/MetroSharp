@@ -1,15 +1,11 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-
 using FluentValidation;
 using FluentValidation.AspNetCore;
-
 using Application.Core;
 using Application.Interfaces;
-
 using Persistence;
-
 using Infrastructure.BackgroundServices.TelegramBot.Configs;
 using Infrastructure.BackgroundServices.TelegramBot;
 using Infrastructure.BackgroundServices.TorrentProcessTask;
@@ -19,14 +15,11 @@ using Infrastructure.GeminiWrapper;
 using Infrastructure.GeminiWrapper.Models;
 using Infrastructure.OmdbWrapper;
 using Infrastructure.OmdbWrapper.Models;
-
 using Infrastructure.QbitTorrentClient;
 using Infrastructure.QbitTorrentClient.Models;
 using Infrastructure.Scrapers;
 using Infrastructure.Security;
 using Infrastructure.Utilities;
-
-
 using Infrastructure.SystemInfo;
 using Infrastructure.ProwlarrWrapper.Models;
 using Infrastructure.ProwlarrWrapper;
@@ -47,37 +40,30 @@ using Microsoft.OpenApi.Models;
 using Quartz;
 
 
-namespace API.Extensions
+namespace API.Extensions;
+
+public static class ApplicationServiceExtensions
 {
-    public static class ApplicationServiceExtensions
-    {
-     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration config)
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration config)
     {
         services.AddOpenApi("internal");
 
-        services.AddDbContext<DataContext>(opt =>
-        {
-            opt.UseSqlite(config.GetConnectionString("DataContext"));
-        });
+        services.AddDbContext<DataContext>(opt => { opt.UseSqlite(config.GetConnectionString("DataContext")); });
 
         services.AddDbContext<DownloadContext>(opt =>
         {
             opt.UseSqlite(config.GetConnectionString("DownloadContext"));
         });
 
-        services.AddDbContextFactory<DownloadContext>(options =>
-        {
-            options.UseSqlite(config.GetConnectionString("DownloadContext"));
-        }, ServiceLifetime.Transient);
+        services.AddDbContextFactory<DownloadContext>(
+            options => { options.UseSqlite(config.GetConnectionString("DownloadContext")); },
+            ServiceLifetime.Transient);
 
         // ----------------- Quartz.NET configuration -----------------
         services.AddQuartz(q =>
         {
             q.SchedulerName = "MainQuartzScheduler";
-            q.UseDefaultThreadPool(tp =>
-            {
-                tp.MaxConcurrency = 6;
-            });
+            q.UseDefaultThreadPool(tp => { tp.MaxConcurrency = 6; });
         });
 
         // Start the Quartz hosted service and wait for jobs to complete on shutdown
@@ -103,11 +89,12 @@ namespace API.Extensions
         });
 
         services.AddHostedService<TelegramBot>();
-        
+
         services.AddHostedService<BackupBackgroundService>();
         services.AddScoped<BackupJob>();
-        
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Application.Users.Commands.Update.Handler).Assembly));
+
+        services.AddMediatR(cfg =>
+            cfg.RegisterServicesFromAssembly(typeof(Application.Users.Commands.Update.Handler).Assembly));
         services.AddAutoMapper(typeof(MappingProfiles).Assembly, typeof(Infrastructure.Core.MappingProfiles).Assembly);
         services.AddHttpContextAccessor();
         services.AddFluentValidationAutoValidation();
@@ -155,116 +142,112 @@ namespace API.Extensions
         return services;
     }
 
-        public static IServiceCollection AddCorsPolicy(
-            this IServiceCollection services,
-            string policyName,
-            IConfiguration config,
-            IWebHostEnvironment env)
+    public static IServiceCollection AddCorsPolicy(
+        this IServiceCollection services,
+        string policyName,
+        IConfiguration config,
+        IWebHostEnvironment env)
+    {
+        services.AddCors(options =>
         {
-            services.AddCors(options =>
+            options.AddPolicy(policyName, policy =>
             {
-                options.AddPolicy(name: policyName, policy =>
+                if (env.IsDevelopment())
                 {
-                    if (env.IsDevelopment())
-                    {
-                        policy.WithOrigins("http://localhost", "null")
+                    policy.WithOrigins("http://localhost", "null")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                }
+                else
+                {
+                    var allowedOrigins = config.GetValue<string>("CorsSettings:AllowedOrigins");
+                    if (!string.IsNullOrEmpty(allowedOrigins))
+                        policy.WithOrigins(allowedOrigins.Split(';', StringSplitOptions.RemoveEmptyEntries))
                             .AllowAnyHeader()
                             .AllowAnyMethod();
-                    }
-                    else
+                }
+            });
+        });
+
+        return services;
+    }
+
+    public static IServiceCollection AddLocalization(this IServiceCollection services, IConfiguration configuration,
+        IHostEnvironment environment)
+    {
+        var basePath = AppContext.BaseDirectory;
+        var path = Path.Combine(basePath, "Localization/BotMessages.json");
+        var botMessagesJson = File.ReadAllText(path);
+
+        var serializerOption = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        var botMessages = JsonSerializer.Deserialize<BotMessages>(botMessagesJson, serializerOption);
+
+        services.AddSingleton(botMessages);
+
+        return services;
+    }
+
+    public static IServiceCollection AddTelegramService(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddScoped<CommandHandler>();
+        services.AddScoped<StartCommandHandler>();
+
+        services.AddScoped<KeyboardHandler>();
+        services.AddScoped<DefaultKeyboards>();
+
+        services.AddScoped<InlineQueryButtons>();
+        services.AddScoped<InlineQueryHandler>();
+        services.AddScoped<ChosenInlineHandler>();
+        services.AddScoped<HandleIMDbId>();
+        services.AddScoped<HandleSearchTitlesInline>();
+
+        services.AddScoped<CallbackQueryButtons>();
+        services.AddScoped<CallbackTitleListHandler>();
+        services.AddScoped<CallbackDownloadHandler>();
+        services.AddScoped<CallbackHandler>();
+
+        services.AddScoped<IsAdmin>();
+        services.AddScoped<HandleForwardedFiles>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddSwagger(this IServiceCollection services)
+    {
+        services.AddEndpointsApiExplorer();
+        services.AddSwaggerGen(c =>
+        {
+            c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Description = "Enter your JWT token in this format: Bearer {your token}"
+            });
+
+            c.AddSecurityRequirement(new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
                     {
-                        var allowedOrigins = config.GetValue<string>("CorsSettings:AllowedOrigins");
-                        if (!string.IsNullOrEmpty(allowedOrigins))
+                        Reference = new OpenApiReference
                         {
-                            policy.WithOrigins(allowedOrigins.Split(';', StringSplitOptions.RemoveEmptyEntries))
-                                .AllowAnyHeader()
-                                .AllowAnyMethod();
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
                         }
-                    }
-                });
+                    },
+                    Array.Empty<string>()
+                }
             });
 
-            return services;
-        }
-
-        public static IServiceCollection AddLocalization(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
-        {
-            var basePath = AppContext.BaseDirectory;
-            var path = Path.Combine(basePath, "BotMessages.json");
-            var botMessagesJson = File.ReadAllText(path);
-
-            var serializerOption = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
-
-            var botMessages = JsonSerializer.Deserialize<BotMessages>(botMessagesJson, serializerOption);
-
-            services.AddSingleton(botMessages);
-
-            return services;
-        }
-
-        public static IServiceCollection AddTelegramService(this IServiceCollection services, IConfiguration configuration)
-        {
-
-            services.AddScoped<CommandHandler>();
-            services.AddScoped<StartCommandHandler>();
-
-            services.AddScoped<KeyboardHandler>();
-            services.AddScoped<DefaultKeyboards>();
-
-            services.AddScoped<InlineQueryButtons>();
-            services.AddScoped<InlineQueryHandler>();
-            services.AddScoped<ChosenInlineHandler>();
-            services.AddScoped<HandleIMDbId>();
-            services.AddScoped<HandleSearchTitlesInline>();
-
-            services.AddScoped<CallbackQueryButtons>();
-            services.AddScoped<CallbackTitleListHandler>();
-            services.AddScoped<CallbackDownloadHandler>();
-            services.AddScoped<CallbackHandler>();
-
-            services.AddScoped<IsAdmin>();
-            services.AddScoped<HandleForwardedFiles>();
-
-            return services;
-        }
-
-        public static IServiceCollection AddSwagger(this IServiceCollection services)
-        {
-            services.AddEndpointsApiExplorer();
-            services.AddSwaggerGen(c =>
-            {
-                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                {
-                    Name = "Authorization",
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "bearer",
-                    BearerFormat = "JWT",
-                    In = ParameterLocation.Header,
-                    Description = "Enter your JWT token in this format: Bearer {your token}"
-                });
-
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
-            {
-                new OpenApiSecurityScheme
-                {
-                    Reference = new OpenApiReference
-                    {
-                        Type = ReferenceType.SecurityScheme,
-                        Id = "Bearer"
-                    }
-                },
-                Array.Empty<string>()
-            }
-                });
-
-                c.CustomSchemaIds(type => type.FullName);
-            });
-            return services;
-        }
-
+            c.CustomSchemaIds(type => type.FullName);
+        });
+        return services;
     }
 }

@@ -1,13 +1,12 @@
 using FluentValidation;
 
-namespace Application.Users.Commands.ConfirmEmail
+namespace Application.Users.Commands.ConfirmEmail;
+
+public class Validator : AbstractValidator<Command>
 {
-    public class Validator : AbstractValidator<Command>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.Code)
-                .NotEmpty().WithMessage("Code is required.");
-        }
+        RuleFor(x => x.Code)
+            .NotEmpty().WithMessage("Code is required.");
     }
 }

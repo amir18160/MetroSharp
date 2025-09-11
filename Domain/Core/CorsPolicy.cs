@@ -1,7 +1,6 @@
-namespace Domain.Core
+namespace Domain.Core;
+
+public static class CorsPolicy
 {
-    public static class CorsPolicy
-    {
-        public const string AllowOrigins = "AllowOrigins";
-    }
+    public const string AllowOrigins = "AllowOrigins";
 }

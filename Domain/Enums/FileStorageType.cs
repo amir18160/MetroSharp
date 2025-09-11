@@ -1,7 +1,6 @@
-namespace Domain.Enums
+namespace Domain.Enums;
+
+public enum FileStorageType
 {
-    public enum FileStorageType
-    {
-        Subtitle
-    }
+    Subtitle
 }

@@ -1,13 +1,9 @@
-﻿
+﻿namespace Domain.Models.TMDb.TvShows;
 
-namespace Domain.Models.TMDb.TvShows
+public class Network : NetworkBase
 {
-    public class Network : NetworkBase
-    {
-        
-        public string Headquarters { get; set; }
+    public string Headquarters { get; set; }
 
-        
-        public string Homepage { get; set; }
-    }
+
+    public string Homepage { get; set; }
 }

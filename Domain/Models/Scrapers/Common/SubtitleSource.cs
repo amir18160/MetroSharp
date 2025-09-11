@@ -1,8 +1,7 @@
-namespace Domain.Models.Scrapers.Common
+namespace Domain.Models.Scrapers.Common;
+
+public enum SubtitleSource
 {
-    public enum SubtitleSource
-    {
-        Sub2fm,
-        Subsource
-    }
+    Sub2fm,
+    Subsource
 }

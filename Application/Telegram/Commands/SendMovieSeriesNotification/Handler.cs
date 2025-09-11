@@ -3,32 +3,31 @@ using Application.Interfaces;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Application.Telegram.Commands.SendMovieSeriesNotification
+namespace Application.Telegram.Commands.SendMovieSeriesNotification;
+
+public class Handler : IRequestHandler<Command, Result<Unit>>
 {
-    public class Handler : IRequestHandler<Command, Result<Unit>>
+    private readonly ILogger<Handler> _logger;
+    private readonly ITelegramManuelMessages _manuelMessages;
+
+    public Handler(ITelegramManuelMessages manuelMessages, ILogger<Handler> logger)
     {
-        private readonly ITelegramManuelMessages _manuelMessages;
-        private readonly ILogger<Handler> _logger;
+        _manuelMessages = manuelMessages;
+        _logger = logger;
+    }
 
-        public Handler(ITelegramManuelMessages manuelMessages, ILogger<Handler> logger)
+    public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
+    {
+        try
         {
-            _manuelMessages = manuelMessages;
-            _logger = logger;
+            await _manuelMessages.SendMovieSeriesNotificationPost(request.NotificationParams);
+
+            return Result<Unit>.Success(Unit.Value);
         }
-
-        public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
+        catch (Exception e)
         {
-            try
-            {
-                await _manuelMessages.SendMovieSeriesNotificationPost(request.NotificationParams);
-                
-                return Result<Unit>.Success(Unit.Value);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError("failed to send message to the channel. message: {error}", e.Message);
-                return Result<Unit>.Failure("Failed to send message to the channel");
-            }
+            _logger.LogError("failed to send message to the channel. message: {error}", e.Message);
+            return Result<Unit>.Failure("Failed to send message to the channel");
         }
     }
 }

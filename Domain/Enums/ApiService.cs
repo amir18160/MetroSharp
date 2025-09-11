@@ -1,8 +1,7 @@
-namespace Domain.Enums
+namespace Domain.Enums;
+
+public enum ApiServiceType
 {
-    public enum ApiServiceType
-    {
-        Gemini,
-        OMDb
-    }
+    Gemini,
+    OMDb
 }

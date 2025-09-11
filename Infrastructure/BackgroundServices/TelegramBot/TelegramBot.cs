@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using Domain.Models.TelegramBot.Messages;
 using Infrastructure.BackgroundServices.TelegramBot.Admin;
 using Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
@@ -7,7 +6,6 @@ using Infrastructure.BackgroundServices.TelegramBot.Command;
 using Infrastructure.BackgroundServices.TelegramBot.Configs;
 using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.BackgroundServices.TelegramBot.Keyboard;
-using Json.More;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -15,112 +13,105 @@ using Microsoft.Extensions.Options;
 using Telegram.Bot.Types.Enums;
 using WTelegram.Types;
 
-namespace Infrastructure.BackgroundServices.TelegramBot
+namespace Infrastructure.BackgroundServices.TelegramBot;
+
+public class TelegramBot : BackgroundService
 {
-    public class TelegramBot : BackgroundService
+    private readonly TelegramBotSettings _settings;
+    private readonly ILogger<TelegramBot> _logger;
+    private readonly WTelegram.Bot _bot;
+    private readonly BotMessages _messages;
+    private readonly IServiceScopeFactory _scopeFactory;
+
+    public TelegramBot(
+        IOptions<TelegramBotSettings> options,
+        WTelegram.Bot bot,
+        ILogger<TelegramBot> logger,
+        BotMessages messages,
+        IServiceScopeFactory scopeFactory)
     {
-        private readonly TelegramBotSettings _settings;
-        private readonly ILogger<TelegramBot> _logger;
-        private readonly WTelegram.Bot _bot;
-        private readonly BotMessages _messages;
-        private readonly IServiceScopeFactory _scopeFactory;
+        _scopeFactory = scopeFactory;
+        _messages = messages;
+        _settings = options.Value;
+        _logger = logger;
+        _bot = bot;
+    }
 
-        public TelegramBot(
-            IOptions<TelegramBotSettings> options,
-            WTelegram.Bot bot,
-            ILogger<TelegramBot> logger,
-            BotMessages messages,
-            IServiceScopeFactory scopeFactory)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        if (!_settings.IsEnabled)
         {
-            _scopeFactory = scopeFactory;
-            _messages = messages;
-            _settings = options.Value;
-            _logger = logger;
-            _bot = bot;
+            _logger.LogInformation("Because of the settings Telegram bot is disabled.");
+            return;
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        TelegramLogger.CreateLogger(_settings.LogPath);
+
+        var me = await _bot.GetMe();
+        await _bot.DropPendingUpdates();
+
+        _bot.WantUnknownTLUpdates = true;
+
+        _bot.OnUpdate += OnUpdate;
+        _bot.OnMessage += OnMessage;
+        _bot.OnError += (e, s) => Console.Error.WriteLineAsync(e.ToString());
+
+        _logger.LogInformation("Telegram Bot is initialized as {Username}", me.Username);
+    }
+
+    private async Task OnMessage(Message message, UpdateType type)
+    {
+        if (message.Text == null) return;
+
+
+        var text = message.Text.ToLower();
+
+        using var scope = _scopeFactory.CreateScope();
+        var commandHandler = scope.ServiceProvider.GetRequiredService<CommandHandler>();
+        var keyboardHandler = scope.ServiceProvider.GetRequiredService<KeyboardHandler>();
+        var chosenInlineHandler = scope.ServiceProvider.GetRequiredService<ChosenInlineHandler>();
+
+
+        if (CommandHandler.IsCommand(text))
         {
-            if (!_settings.IsEnabled)
-            {
-                _logger.LogInformation("Because of the settings Telegram bot is disabled.");
-                return;
-            }
-
-            TelegramLogger.CreateLogger(_settings.LogPath);
-
-            var me = await _bot.GetMe();
-            await _bot.DropPendingUpdates();
-
-            _bot.WantUnknownTLUpdates = true;
-
-            _bot.OnUpdate += OnUpdate;
-            _bot.OnMessage += OnMessage;
-            _bot.OnError += (e, s) => Console.Error.WriteLineAsync(e.ToString());
-
-            _logger.LogInformation("Telegram Bot is initialized as {Username}", me.Username);
+            await commandHandler.HandleCommand(message);
+            return;
         }
 
-        private async Task OnMessage(Message message, UpdateType type)
+        if (keyboardHandler.IsKeyboard(text))
         {
-            if (message.Text == null) return;
-
-        
-            
-            var text = message.Text.ToLower();
-
-            using var scope = _scopeFactory.CreateScope();
-            var commandHandler = scope.ServiceProvider.GetRequiredService<CommandHandler>();
-            var keyboardHandler = scope.ServiceProvider.GetRequiredService<KeyboardHandler>();
-            var chosenInlineHandler = scope.ServiceProvider.GetRequiredService<ChosenInlineHandler>();
-
-            
-            if (CommandHandler.IsCommand(text))
-            {
-                await commandHandler.HandleCommand(message);
-                return;
-            }
-
-            if (keyboardHandler.IsKeyboard(text))
-            {
-                await keyboardHandler.HandleKeyboard(message);
-                return;
-            }
-
-            if (ChosenInlineHandler.IsChosenInline(message))
-            {
-                await chosenInlineHandler.Handle(message);
-            }
-
+            await keyboardHandler.HandleKeyboard(message);
+            return;
         }
 
-        public async Task OnUpdate(WTelegram.Types.Update update)
-        {
-            using var scope = _scopeFactory.CreateScope();
-            var inlineQueryHandler = scope.ServiceProvider.GetRequiredService<InlineQueryHandler>();
-            var callbackHandler = scope.ServiceProvider.GetRequiredService<CallbackHandler>();
+        if (ChosenInlineHandler.IsChosenInline(message)) await chosenInlineHandler.Handle(message);
+    }
 
-            if (update.Type == UpdateType.Unknown)
+    public async Task OnUpdate(Update update)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var inlineQueryHandler = scope.ServiceProvider.GetRequiredService<InlineQueryHandler>();
+        var callbackHandler = scope.ServiceProvider.GetRequiredService<CallbackHandler>();
+
+        if (update.Type == UpdateType.Unknown)
+        {
+            if (update.TLUpdate is TL.UpdateBotInlineQuery updateInlineQuery)
             {
-                if (update.TLUpdate is TL.UpdateBotInlineQuery updateInlineQuery)
-                {
-                    _logger.LogInformation("This is inline query {query}", updateInlineQuery.query);
-                    await inlineQueryHandler.HandleInlineRequest(updateInlineQuery);
-                }
-                else if (update.TLUpdate is TL.UpdateBotCallbackQuery updateCallbackQuery)
-                {
-                    _logger.LogInformation("This is callback query data {data}: ", Encoding.UTF8.GetString(updateCallbackQuery.data));
-                    await callbackHandler.Handle(updateCallbackQuery);
-                }
-                else if (update.TLUpdate is TL.UpdateNewChannelMessage updateNewChannelMessage)
-                {
-                    var handleForwardedMessages = scope.ServiceProvider.GetRequiredService<HandleForwardedFiles>();
-                    var shouldHandleForwardedMessage = await handleForwardedMessages.ShouldHandleMessage(updateNewChannelMessage);
-                    if (shouldHandleForwardedMessage)
-                    {
-                        await handleForwardedMessages.HandleAsync(updateNewChannelMessage);
-                    }
-                }
+                _logger.LogInformation("This is inline query {query}", updateInlineQuery.query);
+                await inlineQueryHandler.HandleInlineRequest(updateInlineQuery);
+            }
+            else if (update.TLUpdate is TL.UpdateBotCallbackQuery updateCallbackQuery)
+            {
+                _logger.LogInformation("This is callback query data {data}: ",
+                    Encoding.UTF8.GetString(updateCallbackQuery.data));
+                await callbackHandler.Handle(updateCallbackQuery);
+            }
+            else if (update.TLUpdate is TL.UpdateNewChannelMessage updateNewChannelMessage)
+            {
+                var handleForwardedMessages = scope.ServiceProvider.GetRequiredService<HandleForwardedFiles>();
+                var shouldHandleForwardedMessage =
+                    await handleForwardedMessages.ShouldHandleMessage(updateNewChannelMessage);
+                if (shouldHandleForwardedMessage) await handleForwardedMessages.HandleAsync(updateNewChannelMessage);
             }
         }
     }

@@ -1,8 +1,7 @@
-namespace Domain.Enums
+namespace Domain.Enums;
+
+public enum OmdbItemType
 {
-    public enum OmdbItemType
-    {
-        Movie,
-        Series
-    }
+    Movie,
+    Series
 }

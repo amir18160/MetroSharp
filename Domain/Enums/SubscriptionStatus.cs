@@ -1,8 +1,7 @@
-namespace Domain.Enums
+namespace Domain.Enums;
+
+public enum SubscriptionStatus
 {
-    public enum SubscriptionStatus
-    {
-        Active,
-        Expired,
-    }
+    Active,
+    Expired
 }

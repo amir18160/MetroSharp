@@ -1,13 +1,12 @@
 using FluentValidation;
 
-namespace Application.Scrapers.Queries.SearchSubtitle
+namespace Application.Scrapers.Queries.SearchSubtitle;
+
+public class Validator : AbstractValidator<Query>
 {
-    public class Validator : AbstractValidator<Query>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.SearchQuery)
-                .NotEmpty();
-        }
+        RuleFor(x => x.SearchQuery)
+            .NotEmpty();
     }
 }

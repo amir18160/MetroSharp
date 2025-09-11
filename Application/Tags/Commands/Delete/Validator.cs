@@ -1,12 +1,11 @@
 using FluentValidation;
 
-namespace Application.Tags.Commands.Delete
+namespace Application.Tags.Commands.Delete;
+
+public class Validator : AbstractValidator<Command>
 {
-    public class Validator : AbstractValidator<Command>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.Id).NotEmpty();
-        }
+        RuleFor(x => x.Id).NotEmpty();
     }
 }

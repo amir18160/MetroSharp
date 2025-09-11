@@ -10,7 +10,7 @@ using Persistence;
 
 namespace Infrastructure.GeminiWrapper;
 
-public class GeminiService :IGeminiService
+public class GeminiService : IGeminiService
 {
     private readonly List<string> _apiKeys;
     private readonly ILogger<GeminiService> _logger;
@@ -26,7 +26,8 @@ public class GeminiService :IGeminiService
 
     public async Task<string> GenerateContentAsync(string prompt)
     {
-        var apiKey = await GetAvailableKeyAsync() ?? throw new InvalidOperationException("No available Gemini API key.");
+        var apiKey = await GetAvailableKeyAsync() ??
+                     throw new InvalidOperationException("No available Gemini API key.");
         var ai = new GoogleAI(apiKey);
         var model = ai.GenerativeModel(Model.Gemini20FlashLite);
 

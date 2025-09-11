@@ -1,9 +1,8 @@
 using Domain.Entities;
 
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface IOmdbService
 {
-    public interface IOmdbService
-    {
-        Task<OmdbItem> GetTitleByImdbIdAsync(string imdbId);
-    }
+    Task<OmdbItem> GetTitleByImdbIdAsync(string imdbId);
 }

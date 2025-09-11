@@ -1,12 +1,12 @@
-using Domain.Models.TMDb;
 using Domain.Models.TMDb.General;
+using Domain.Models.TMDb.Movies;
+using Domain.Models.TMDb.TvShows;
 
-namespace Application.Interfaces
+namespace Application.Interfaces;
+
+public interface ITMDbService
 {
-    public interface ITMDbService
-    {
-        Task<List<TMDbMedia>> SearchMulti(MultiSearchParams @params);
-        Task<Domain.Models.TMDb.Movies.Movie> GetMovieDetails(GetMediaDetailsParams @params);
-        Task<Domain.Models.TMDb.TvShows.TvShow> GetTvShowDetails(GetMediaDetailsParams @params);
-    }
+    Task<List<TMDbMedia>> SearchMulti(MultiSearchParams @params);
+    Task<Movie> GetMovieDetails(GetMediaDetailsParams @params);
+    Task<TvShow> GetTvShowDetails(GetMediaDetailsParams @params);
 }

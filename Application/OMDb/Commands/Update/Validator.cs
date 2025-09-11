@@ -1,13 +1,12 @@
 using FluentValidation;
 
-namespace Application.OMDb.Commands.Update
+namespace Application.OMDb.Commands.Update;
+
+public class Validator : AbstractValidator<Command>
 {
-    public class Validator : AbstractValidator<Command>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.Id).NotEmpty();
-            RuleFor(x => x.OmdbItem).NotNull();
-        }
+        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.OmdbItem).NotNull();
     }
 }

@@ -1,74 +1,61 @@
 using Application.Core;
 using Application.Interfaces;
 using Domain.Entities;
+using Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
 
-namespace Application.Users.Commands.SendConfirmationEmail
+namespace Application.Users.Commands.SendConfirmationEmail;
+
+public class Handler : IRequestHandler<Command, Result<Unit>>
 {
-    public class Handler : IRequestHandler<Command, Result<Unit>>
+    private readonly DataContext _context;
+    private readonly IEmailService _emailService;
+    private readonly IUserAccessor _userAccessor;
+
+    public Handler(IUserAccessor userAccessor, DataContext context, IEmailService emailService)
     {
-        private readonly IUserAccessor _userAccessor;
-        private readonly DataContext _context;
-        private readonly IEmailService _emailService;
-        public Handler(IUserAccessor userAccessor, DataContext context, IEmailService emailService)
+        _emailService = emailService;
+        _context = context;
+        _userAccessor = userAccessor;
+    }
+
+    public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
+    {
+        var user = await _context.Users
+            .Include(u => u.EmailVerifications)
+            .FirstOrDefaultAsync(x => x.UserName == _userAccessor.GetUserName(), cancellationToken);
+
+        if (user == null) return Result<Unit>.Failure("User not found.");
+
+        if (user.IsConfirmed) return Result<Unit>.Failure("User is already confirmed.");
+
+        var alreadyInProcess = user.EmailVerifications.Any(x =>
+            x.Purpose == EmailPurpose.Confirmation &&
+            x.Expiration > DateTime.UtcNow &&
+            !x.Used);
+
+        if (alreadyInProcess)
+            return Result<Unit>.Failure(
+                "A confirmation email is already in progress. Please check your inbox or Spam folder.");
+
+        var generatedCode = Guid.NewGuid().ToString();
+
+        _context.EmailVerifications.Add(new EmailVerification
         {
-            _emailService = emailService;
-            _context = context;
-            _userAccessor = userAccessor;
-        }
+            Expiration = DateTime.UtcNow.AddMinutes(20),
+            User = user,
+            Code = generatedCode,
+            Purpose = EmailPurpose.Confirmation
+        });
 
-        public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
-        {
-            var user = await _context.Users
-                .Include(u => u.EmailVerifications)
-                .FirstOrDefaultAsync(x => x.UserName == _userAccessor.GetUserName(), cancellationToken);
+        var result = await _context.SaveChangesAsync(cancellationToken);
+        if (result == 0) return Result<Unit>.Failure("Failed to save email verification record.");
 
-            if (user == null)
-            {
-                return Result<Unit>.Failure("User not found.");
-            }
+        var emailSenderResult = await _emailService.SendConfirmationEmail(user.Email, user.Name, generatedCode);
+        if (!emailSenderResult) return Result<Unit>.Failure("Failed to send new confirmation email.");
 
-            if (user.IsConfirmed)
-            {
-                return Result<Unit>.Failure("User is already confirmed.");
-            }
-
-            var alreadyInProcess = user.EmailVerifications.Any(x =>
-                x.Purpose == Domain.Enums.EmailPurpose.Confirmation &&
-                x.Expiration > DateTime.UtcNow &&
-                !x.Used);
-
-            if (alreadyInProcess)
-            {
-                return Result<Unit>.Failure("A confirmation email is already in progress. Please check your inbox or Spam folder.");
-            }
-
-            var generatedCode = Guid.NewGuid().ToString();
-
-            _context.EmailVerifications.Add(new EmailVerification
-            {
-                Expiration = DateTime.UtcNow.AddMinutes(20),
-                User = user,
-                Code = generatedCode,
-                Purpose = Domain.Enums.EmailPurpose.Confirmation,
-            });
-
-            var result = await _context.SaveChangesAsync(cancellationToken);
-            if (result == 0)
-            {
-                return Result<Unit>.Failure("Failed to save email verification record.");
-            }
-            
-            var emailSenderResult = await _emailService.SendConfirmationEmail(user.Email, user.Name, generatedCode);
-            if (!emailSenderResult)
-            {
-                return Result<Unit>.Failure("Failed to send new confirmation email.");
-            }
-
-            return Result<Unit>.Success(Unit.Value);
-        }
-
+        return Result<Unit>.Success(Unit.Value);
     }
 }

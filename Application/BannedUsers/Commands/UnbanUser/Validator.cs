@@ -1,14 +1,13 @@
 using FluentValidation;
 
-namespace Application.BannedUsers.Commands.UnbanUser
+namespace Application.BannedUsers.Commands.UnbanUser;
+
+public class Validator : AbstractValidator<Command>
 {
-    public class Validator : AbstractValidator<Command>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.UserId)
-                .NotEmpty()
-                .WithMessage("There must be a UserId to Unban.");
-        }
+        RuleFor(x => x.UserId)
+            .NotEmpty()
+            .WithMessage("There must be a UserId to Unban.");
     }
 }

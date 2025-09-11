@@ -1,11 +1,10 @@
-namespace Domain.Enums
+namespace Domain.Enums;
+
+public enum TagType
 {
-    public enum TagType
-    {
-        NewTopRated,
-        New,
-        Recommended,
-        UpdatedMovie,
-        UpdatedSeries,
-    }
+    NewTopRated,
+    New,
+    Recommended,
+    UpdatedMovie,
+    UpdatedSeries
 }

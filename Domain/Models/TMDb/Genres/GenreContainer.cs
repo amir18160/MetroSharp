@@ -1,9 +1,8 @@
 ﻿using Domain.Models.TMDb.General;
 
-namespace Domain.Models.TMDb.Genres
+namespace Domain.Models.TMDb.Genres;
+
+public class GenreContainer
 {
-    public class GenreContainer
-    {
-        public List<Genre> Genres { get; set; }
-    }
+    public List<Genre> Genres { get; set; }
 }

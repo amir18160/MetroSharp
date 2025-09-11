@@ -1,8 +1,7 @@
-namespace Domain.Models.Scrapers.Rarbg
+namespace Domain.Models.Scrapers.Rarbg;
+
+public class RarbgPeerInfo
 {
-    public class RarbgPeerInfo
-    {
-        public string Seeders { get; set; }
-        public string Leechers { get; set; }
-    }
+    public string Seeders { get; set; }
+    public string Leechers { get; set; }
 }

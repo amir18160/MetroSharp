@@ -1,12 +1,11 @@
 using FluentValidation;
 
-namespace Application.Scrapers.Queries.SearchYTS
+namespace Application.Scrapers.Queries.SearchYTS;
+
+public class Validator : AbstractValidator<Query>
 {
-    public class Validator: AbstractValidator<Query>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.SearchTerm).NotEmpty().MaximumLength(100);
-        }
+        RuleFor(x => x.SearchTerm).NotEmpty().MaximumLength(100);
     }
 }

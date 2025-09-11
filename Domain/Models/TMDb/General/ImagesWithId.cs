@@ -1,9 +1,6 @@
-﻿
-namespace Domain.Models.TMDb.General
-{
-    public class ImagesWithId : Images
-    {
+﻿namespace Domain.Models.TMDb.General;
 
-        public int Id { get; set; }
-    }
+public class ImagesWithId : Images
+{
+    public int Id { get; set; }
 }

@@ -1,8 +1,6 @@
+namespace Infrastructure.TMDbService.Models;
 
-namespace Infrastructure.TMDbService.Models
+public class TMDbSettings
 {
-    public class TMDbSettings
-    {
-        public string ApiKey { get; set; }        
-    }
+    public string ApiKey { get; set; }
 }

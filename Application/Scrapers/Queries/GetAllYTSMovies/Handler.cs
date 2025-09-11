@@ -4,36 +4,32 @@ using Domain.Models.Scrapers.Yts;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace Application.Scrapers.Queries.GetAllYTSMovies
+namespace Application.Scrapers.Queries.GetAllYTSMovies;
+
+public class Handler : IRequestHandler<Query, Result<List<YtsPreview>>>
 {
-    public class Handler : IRequestHandler<Query, Result<List<YtsPreview>>>
+    private readonly ILogger<Handler> _logger;
+    private readonly IScraperFacade _scraperFacade;
+
+    public Handler(IScraperFacade scraperFacade, ILogger<Handler> logger)
     {
-        private readonly IScraperFacade _scraperFacade;
-        private readonly ILogger<Handler> _logger;
+        _scraperFacade = scraperFacade;
+        _logger = logger;
+    }
 
-        public Handler(IScraperFacade scraperFacade, ILogger<Handler> logger)
+    public async Task<Result<List<YtsPreview>>> Handle(Query request, CancellationToken cancellationToken)
+    {
+        try
         {
-            _scraperFacade = scraperFacade;
-            _logger = logger;
+            var result = await _scraperFacade.GetAllMoviesAsync(request.Page);
+            if (result == null || result.Count == 0) return Result<List<YtsPreview>>.Failure("No movies found.");
+
+            return Result<List<YtsPreview>>.Success(result);
         }
-
-        public async Task<Result<List<YtsPreview>>> Handle(Query request, CancellationToken cancellationToken)
+        catch (Exception ex)
         {
-            try
-            {
-                var result = await _scraperFacade.GetAllMoviesAsync(request.Page);
-                if (result == null || result.Count == 0 )
-                {
-                    return Result<List<YtsPreview>>.Failure("No movies found.");
-                }
-
-                return Result<List<YtsPreview>>.Success(result);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error fetching YTS movies");
-                return Result<List<YtsPreview>>.Failure("An error occurred while fetching movies.");
-            }
+            _logger.LogError(ex, "Error fetching YTS movies");
+            return Result<List<YtsPreview>>.Failure("An error occurred while fetching movies.");
         }
     }
 }

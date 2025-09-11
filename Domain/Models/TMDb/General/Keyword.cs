@@ -1,12 +1,9 @@
-﻿
-namespace Domain.Models.TMDb.General
+﻿namespace Domain.Models.TMDb.General;
+
+public class Keyword
 {
-    public class Keyword
-    {
-    
-        public int Id { get; set; }
+    public int Id { get; set; }
 
 
-        public string Name { get; set; }
-    }
+    public string Name { get; set; }
 }

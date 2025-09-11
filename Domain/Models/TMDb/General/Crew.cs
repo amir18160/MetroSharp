@@ -1,8 +1,7 @@
-﻿namespace Domain.Models.TMDb.General
+﻿namespace Domain.Models.TMDb.General;
+
+public class Crew : CrewBase
 {
-    public class Crew : CrewBase
-    {
-        public string CreditId { get; set; }
-        public string Job { get; set; }
-    }
+    public string CreditId { get; set; }
+    public string Job { get; set; }
 }

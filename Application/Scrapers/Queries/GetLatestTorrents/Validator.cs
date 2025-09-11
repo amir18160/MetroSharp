@@ -1,9 +1,7 @@
 using FluentValidation;
 
-namespace Application.Scrapers.Queries.GetLatestTorrents
+namespace Application.Scrapers.Queries.GetLatestTorrents;
+
+public class Validator : AbstractValidator<Query>
 {
-    public class Validator: AbstractValidator<Query>
-    {
-        
-    }
 }

@@ -2,57 +2,50 @@ using Domain.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace API.Controllers
+namespace API.Controllers;
+
+[Authorize(Roles = Roles.Owner)]
+public class LogsController : BaseApiController
 {
-    [Authorize(Roles = Roles.Owner)]
-    public class LogsController : BaseApiController
+    private readonly string _logsDirectory = "logs/server";
+
+    [HttpGet("get-logs")]
+    public IActionResult GetLogFiles()
     {
-        private readonly string _logsDirectory = "logs/server";
+        if (!Directory.Exists(_logsDirectory)) return Ok(new List<string>());
 
-        [HttpGet("get-logs")]
-        public IActionResult GetLogFiles()
+        var logFiles = Directory.GetFiles(_logsDirectory)
+            .Select(Path.GetFileName)
+            .OrderByDescending(f => f)
+            .ToList();
+
+        return Ok(logFiles);
+    }
+
+    [HttpGet("{fileName}")]
+    public async Task<IActionResult> GetLogFile(string fileName)
+    {
+        var filePath = Path.Combine(_logsDirectory, fileName);
+
+        if (!System.IO.File.Exists(filePath)) return NotFound("Log file not found.");
+
+        try
         {
-            if (!Directory.Exists(_logsDirectory))
-            {
-                return Ok(new List<string>());
-            }
+            using var stream = new FileStream(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite
+            );
 
-            var logFiles = Directory.GetFiles(_logsDirectory)
-                .Select(Path.GetFileName)
-                .OrderByDescending(f => f)
-                .ToList();
+            using var reader = new StreamReader(stream);
+            var content = await reader.ReadToEndAsync();
 
-            return Ok(logFiles);
+            return Content(content, "plain/text");
         }
-
-        [HttpGet("{fileName}")]
-        public async Task<IActionResult> GetLogFile(string fileName)
+        catch (Exception ex)
         {
-            var filePath = Path.Combine(_logsDirectory, fileName);
-
-            if (!System.IO.File.Exists(filePath))
-            {
-                return NotFound("Log file not found.");
-            }
-
-            try
-            {
-                using var stream = new FileStream(
-                    filePath,
-                    FileMode.Open,
-                    FileAccess.Read,
-                    FileShare.ReadWrite
-                );
-
-                using var reader = new StreamReader(stream);
-                var content = await reader.ReadToEndAsync();
-
-                return Content(content, "plain/text");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Failed to read log file: {ex.Message}");
-            }
+            return StatusCode(500, $"Failed to read log file: {ex.Message}");
         }
     }
 }

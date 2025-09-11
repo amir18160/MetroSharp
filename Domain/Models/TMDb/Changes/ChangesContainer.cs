@@ -1,11 +1,6 @@
-﻿using System.Collections.Generic;
+﻿namespace Domain.Models.TMDb.Changes;
 
-
-namespace Domain.Models.TMDb.Changes
+public class ChangesContainer
 {
-    public class ChangesContainer
-    {
-        
-        public List<Change> Changes { get; set; }
-    }
+    public List<Change> Changes { get; set; }
 }

@@ -1,7 +1,6 @@
-namespace Domain.Models.Scrapers.Sub2fm
+namespace Domain.Models.Scrapers.Sub2fm;
+
+public class SubF2SubtitleDownload
 {
-    public class SubF2SubtitleDownload
-    {
-        public string DownloadUrl { get; set; }
-    }
+    public string DownloadUrl { get; set; }
 }

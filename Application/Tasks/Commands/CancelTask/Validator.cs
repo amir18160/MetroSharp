@@ -1,12 +1,11 @@
 using FluentValidation;
 
-namespace Application.Tasks.Commands.CancelTask
+namespace Application.Tasks.Commands.CancelTask;
+
+public class Validator : AbstractValidator<Command>
 {
-    public class Validator : AbstractValidator<Command>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.Id).NotEmpty();
-        }
+        RuleFor(x => x.Id).NotEmpty();
     }
 }

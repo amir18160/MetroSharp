@@ -1,13 +1,12 @@
 using FluentValidation;
 
-namespace Application.Indexer.Queries.SearchIndexer
+namespace Application.Indexer.Queries.SearchIndexer;
+
+public class Validator : AbstractValidator<Query>
 {
-    public class Validator : AbstractValidator<Query>
+    public Validator()
     {
-        public Validator()
-        {
-            RuleFor(x => x.SearchQuery)
-                .NotEmpty();
-        }
+        RuleFor(x => x.SearchQuery)
+            .NotEmpty();
     }
 }
