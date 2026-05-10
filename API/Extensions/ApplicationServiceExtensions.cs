@@ -30,12 +30,15 @@ using Infrastructure.FileStorageService;
 using System.Text.Json;
 using Domain.Models.TelegramBot.Messages;
 using Infrastructure.BackgroundServices.DatabaseBackupService;
+using Infrastructure.BackgroundServices.SitemapGeneratorService;
 using Infrastructure.BackgroundServices.TelegramBot.Admin;
 using Infrastructure.BackgroundServices.TelegramBot.Command;
 using Infrastructure.BackgroundServices.TelegramBot.Keyboard;
 using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
 using Infrastructure.BackgroundServices.TelegramBot.Messages;
+using Infrastructure.BackgroundServices.TelegramBot.Middlewares;
+using Infrastructure.ImageEditorService;
 using Microsoft.OpenApi.Models;
 using Quartz;
 
@@ -49,46 +52,42 @@ public static class ApplicationServiceExtensions
         services.AddOpenApi("internal");
 
         services.AddDbContext<DataContext>(opt => { opt.UseSqlite(config.GetConnectionString("DataContext")); });
-
+        
+        services.AddCoreAdmin();
+        
         services.AddDbContext<DownloadContext>(opt =>
         {
             opt.UseSqlite(config.GetConnectionString("DownloadContext"));
         });
-
         services.AddDbContextFactory<DownloadContext>(
             options => { options.UseSqlite(config.GetConnectionString("DownloadContext")); },
             ServiceLifetime.Transient);
 
-        // ----------------- Quartz.NET configuration -----------------
+
         services.AddQuartz(q =>
         {
+            var maxConcurrency = config.GetValue("TorrentTaskSettings:MaxConcurrency", 10);
             q.SchedulerName = "MainQuartzScheduler";
-            q.UseDefaultThreadPool(tp => { tp.MaxConcurrency = 6; });
+            q.UseDefaultThreadPool(tp => { tp.MaxConcurrency = maxConcurrency; });
         });
-
-        // Start the Quartz hosted service and wait for jobs to complete on shutdown
         services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
-
-        // Register job types so DI can create them
+        services.AddHostedService<TaskPollingService>();
         services.AddScoped<TorrentTaskJob>();
         services.AddScoped<TaskCleanerJob>();
-
-        // ----------------- your existing services (unchanged) -----------------
         services.AddScoped<TorrentTaskProcessor>();
         services.AddScoped<TaskCleaner>();
-        services.AddHostedService<TaskPollingService>();
+        services.AddScoped<TorrentTaskStartConditionChecker>();
+        services.AddScoped<CheckAndGenerateOMDbData>();
+        services.AddScoped<StartTorrentTaskDownload>();
+        services.AddScoped<ExtractSubtitleForTorrent>();
+        services.AddScoped<PairSubtitleWithVideos>();
+        services.AddScoped<SubtitleEditor>();
+        services.AddScoped<FFmpegTaskProcessor>();
+        services.AddScoped<FileUploadProcessor>();
+        services.AddScoped<TaskCleaner>();
+        services.AddScoped<ITaskManager, TaskManager>();
 
-        services.AddSingleton(sp =>
-        {
-            var settings = sp.GetRequiredService<IOptions<TelegramBotSettings>>().Value;
-            var isDevelopment = sp.GetRequiredService<IHostEnvironment>().IsDevelopment();
-            var connectionString = config.GetConnectionString("TelegramContext");
-            var dbConnection = new SqliteConnection(connectionString);
-            var botToken = isDevelopment ? settings.DevelopmentBotToken : settings.BotToken;
-            return new WTelegram.Bot(botToken, settings.AppId, settings.ApiHash, dbConnection);
-        });
-
-        services.AddHostedService<TelegramBot>();
+        services.AddHostedService<SitemapGeneratorService>();
 
         services.AddHostedService<BackupBackgroundService>();
         services.AddScoped<BackupJob>();
@@ -110,11 +109,13 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IFileStorageService, FileStorageService>();
         services.AddScoped<ITelegramManuelMessages, ManuelMessages>();
 
-        services.AddHttpClient<IOmdbService, OMDbService>();
-        services.AddHttpClient<ZipDownloader>();
+        services.AddScoped<ImageEditorService>();
 
         services.AddSingleton<IQbitClient, QbitClient>();
         services.AddTransient<IEmailService, EmailService>();
+
+        services.AddHttpClient<IOmdbService, OMDbService>();
+        services.AddHttpClient<ZipDownloader>();
 
         services.Configure<SmtpSettings>(config.GetSection("SmtpSettings"));
         services.Configure<EmailSettings>(config.GetSection("EmailSettings"));
@@ -127,17 +128,8 @@ public static class ApplicationServiceExtensions
         services.Configure<TMDbSettings>(config.GetSection("TMDbSettings"));
         services.Configure<FileStorageSettings>(config.GetSection("FileStorageSettings"));
         services.Configure<BackupSettings>(config.GetSection("BackupSettings"));
-
-        services.AddScoped<TorrentTaskStartConditionChecker>();
-        services.AddScoped<CheckAndGenerateOMDbData>();
-        services.AddScoped<StartTorrentTaskDownload>();
-        services.AddScoped<ExtractSubtitleForTorrent>();
-        services.AddScoped<PairSubtitleWithVideos>();
-        services.AddScoped<SubtitleEditor>();
-        services.AddScoped<FFmpegTaskProcessor>();
-        services.AddScoped<FileUploadProcessor>();
-        services.AddScoped<TaskCleaner>();
-        services.AddScoped<ITaskManager, TaskManager>();
+        services.Configure<SitemapSettings>(config.GetSection("SitemapSettings"));
+        services.Configure<ImageEditorSettings>(config.GetSection("ImageEditorSettings"));
 
         return services;
     }
@@ -193,6 +185,21 @@ public static class ApplicationServiceExtensions
 
     public static IServiceCollection AddTelegramService(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton(sp =>
+        {
+            var settings = sp.GetRequiredService<IOptions<TelegramBotSettings>>().Value;
+            var isDevelopment = sp.GetRequiredService<IHostEnvironment>().IsDevelopment();
+            var connectionString = configuration.GetConnectionString("TelegramContext");
+            var dbConnection = new SqliteConnection(connectionString);
+            var botToken = isDevelopment ? settings.DevelopmentBotToken : settings.BotToken;
+            return new WTelegram.Bot(botToken, settings.AppId, settings.ApiHash, dbConnection)
+            {
+                WantUnknownTLUpdates = true
+            };
+        });
+
+        services.AddHostedService<TelegramBot>();
+
         services.AddScoped<CommandHandler>();
         services.AddScoped<StartCommandHandler>();
 
@@ -212,6 +219,8 @@ public static class ApplicationServiceExtensions
 
         services.AddScoped<IsAdmin>();
         services.AddScoped<HandleForwardedFiles>();
+
+        services.AddScoped<JoinCheck>();
 
         return services;
     }

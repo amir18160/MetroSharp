@@ -11,7 +11,7 @@ public class DomainSpec : GenerationSpec
 
         var modelTypes = assembly.GetTypes()
             .Where(t => t.IsClass && t.IsPublic && t.Namespace != null &&
-                        t.Namespace.StartsWith("Domain.Models.Scrapers"));
+                        t.Namespace.StartsWith("Domain"));
 
         foreach (var type in modelTypes) AddClass(type);
     }

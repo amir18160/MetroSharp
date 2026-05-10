@@ -1,0 +1,15 @@
+using Domain.Enums;
+
+namespace Application.OMDb.DTOs;
+
+public class OMDbSummaryDto
+{
+    public Guid Id { get; set; }
+    public string ImdbId { get; set; }
+    public string Title { get; set; }
+    public string Poster { get; set; }
+    public decimal? ImdbRating { get; set; }
+    public double? ImdbVotes { get; set; }
+    public OmdbItemType Type { get; set; }
+    public int? Year { get; set; }
+}

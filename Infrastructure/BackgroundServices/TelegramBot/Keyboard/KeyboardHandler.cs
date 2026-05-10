@@ -3,6 +3,7 @@ using Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
 using Infrastructure.BackgroundServices.TelegramBot.Configs;
 using Microsoft.Extensions.Options;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace Infrastructure.BackgroundServices.TelegramBot.Keyboard;
@@ -41,6 +42,11 @@ public class KeyboardHandler
         return _keyboardActions.ContainsKey(message);
     }
 
+    public bool IsOldKeyboard(string message)
+    {
+        return _messages.OldKeyboardButtons.Contains(message);
+    }
+
     public async Task HandleKeyboard(Message message)
     {
         if (_keyboardActions.TryGetValue(message.Text, out var action))
@@ -49,6 +55,11 @@ public class KeyboardHandler
             await _bot.SendMessage(message.Chat.Id, _messages.ErrorMessages.Unknown);
     }
 
+    public async Task HandleAskUserToUpdate(Message message)
+    {
+        await _bot.SendMessage(message.Chat.Id, _messages.PleaseUpdate, ParseMode.Html);
+    }
+    
     private async Task HandleLatestTitlesAsync(Message message)
     {
         var imagePath = Path.Combine(AppContext.BaseDirectory, "Images/latest-movies.jpg");

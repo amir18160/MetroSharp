@@ -7,6 +7,7 @@ using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Persistence;
 using Telegram.Bot.Types.Enums;
@@ -21,18 +22,23 @@ public class ManuelMessages : ITelegramManuelMessages
     private readonly DataContext _context;
     private readonly BotMessages _messages;
     private readonly IHostEnvironment _environment;
+    private readonly ImageEditorService.ImageEditorService _imageEditorService;
+    private readonly ILogger<ManuelMessages> _logger;
     private readonly HandleIMDbId _handleImdbId;
     private readonly TelegramBotSettings _settings;
 
 
     public ManuelMessages(Bot bot, IOptions<TelegramBotSettings> settings, DataContext context,
-        HandleIMDbId handleImdbId, BotMessages messages, IHostEnvironment environment)
+        HandleIMDbId handleImdbId, BotMessages messages, IHostEnvironment environment,
+        ImageEditorService.ImageEditorService imageEditorService, ILogger<ManuelMessages> logger)
     {
         _settings = settings.Value;
         _bot = bot;
         _context = context;
         _messages = messages;
         _environment = environment;
+        _imageEditorService = imageEditorService;
+        _logger = logger;
         _handleImdbId = handleImdbId;
     }
 
@@ -63,12 +69,38 @@ public class ManuelMessages : ITelegramManuelMessages
 
         var channelId = _environment.IsDevelopment() ? _settings.BinChannelChatID : _settings.MainChannelID;
 
+
         try
         {
-            await _bot.SendPhoto(channelId, omdbItem.Poster, messageBody, ParseMode.Html,
-                replyMarkup: inlineButtons);
+            MemoryStream generatedPoster = null;
+            try
+            {
+                generatedPoster = await _imageEditorService.GenerateMediaWatermark(omdbItem.Poster);
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning("failed to generate media watermark");
+            }
+
+            if (generatedPoster != null)
+            {
+                await _bot.SendPhoto(channelId, generatedPoster, messageBody, ParseMode.Html,
+                    replyMarkup: inlineButtons);
+            }
+            else
+            {
+                await _bot.SendPhoto(channelId, omdbItem.Poster, messageBody, ParseMode.Html,
+                    replyMarkup: inlineButtons);
+            }
+
+            return;
         }
         catch
+        {
+            _logger.LogWarning("failed to send a media with photo. trying to send without photo...");
+        }
+
+        try
         {
             await _bot.SendMessage(
                 channelId,
@@ -76,6 +108,11 @@ public class ManuelMessages : ITelegramManuelMessages
                 replyMarkup: inlineButtons,
                 parseMode: ParseMode.Html
             );
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning("failed to send a media notification and all its fallbacks.");
+            throw;
         }
     }
 

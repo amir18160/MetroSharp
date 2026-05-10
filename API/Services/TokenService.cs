@@ -18,7 +18,7 @@ public class TokenService
         _configuration = configuration;
     }
 
-    public async Task<string> CreateToken(User user)
+    public async Task<string> CreateToken(User user, int tokenExpiryDays = 7)
     {
         var roles = await _userManager.GetRolesAsync(user);
         var claims = new List<Claim>
@@ -28,15 +28,19 @@ public class TokenService
             new(ClaimTypes.Email, user.Email)
         };
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
-
-
+        
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["TokenKey"]));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
 
+        if (roles.Contains(Domain.Core.Roles.Owner))
+        {
+            tokenExpiryDays = 90;
+        }
+        
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddDays(7),
+            Expires = DateTime.UtcNow.AddDays(tokenExpiryDays),
             SigningCredentials = creds
         };
 

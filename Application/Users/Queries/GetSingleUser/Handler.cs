@@ -1,5 +1,8 @@
 using Application.Core;
+using Application.Subscriptions;
+using Application.Subscriptions.Queries;
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
@@ -32,18 +35,23 @@ public class Handler : IRequestHandler<Query, Result<UserDetailsDto>>
         else if (!string.IsNullOrWhiteSpace(request.Phone))
             user = await _context.Users.FirstOrDefaultAsync(x => x.PhoneNumber == request.Phone, cancellationToken);
 
-        if (user == null) return Result<UserDetailsDto>.Failure("User not found");
+        if (user == null) return null;
 
         var isBanned = await _context.BannedUsers
             .AnyAsync(x => x.UserId == user.Id && (x.FreeAt == null || x.FreeAt > DateTime.UtcNow), cancellationToken);
 
-        var hasSubscription = await _context.Subscriptions
-            .AnyAsync(x => x.UserId == user.Id && x.EndAt > DateTime.UtcNow, cancellationToken);
+        var subscriptions = await _context.Subscriptions
+            .Where(x => x.UserId == user.Id && x.EndAt > DateTime.UtcNow)
+            .ProjectTo<UserSubscriptionDto>(_mapper.ConfigurationProvider)
+            .ToListAsync(cancellationToken);
+        
+        var targetRoles = await _userManager.GetRolesAsync(user);
 
         var userDto = _mapper.Map<UserDetailsDto>(user);
 
         userDto.IsBanned = isBanned;
-        userDto.HasActiveSubscription = hasSubscription;
+        userDto.CurrentActiveSubscription = subscriptions.FirstOrDefault();
+        userDto.Role = targetRoles.FirstOrDefault();
 
         return Result<UserDetailsDto>.Success(userDto);
     }

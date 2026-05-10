@@ -6,8 +6,8 @@ public class Validator : AbstractValidator<Command>
 {
     public Validator()
     {
-        RuleFor(x => x.Username)
-            .NotEmpty().WithMessage("Username is required.");
+        RuleFor(x => x.Id)
+            .NotEmpty().WithMessage("Id is required.");
 
         RuleFor(x => x.Activate)
             .NotNull().WithMessage("Activation state is required.");

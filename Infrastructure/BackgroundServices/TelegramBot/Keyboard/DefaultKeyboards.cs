@@ -6,7 +6,8 @@ namespace Infrastructure.BackgroundServices.TelegramBot.Keyboard;
 public class DefaultKeyboards
 {
     private readonly BotMessages _messages;
-    public ReplyMarkup StartKeyboard { set; get; }
+    public ReplyMarkup StartKeyboard { private set; get; }
+    public ReplyMarkup OldKeyboard { private set; get; }
 
     public DefaultKeyboards(BotMessages messages)
     {
@@ -14,7 +15,7 @@ public class DefaultKeyboards
         InitializeKeyboards();
     }
 
-    public void InitializeKeyboards()
+    private void InitializeKeyboards()
     {
         StartKeyboard = new[]
         {

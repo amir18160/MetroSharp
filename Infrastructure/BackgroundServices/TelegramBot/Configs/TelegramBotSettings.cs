@@ -8,6 +8,7 @@ public class TelegramBotSettings
     public string BotToken { get; set; }
     public string BotUsername { get; set; }
     public string DevelopmentBotToken { get; set; }
+    public string MailChannelUsername { get; set; }
     public long MainChannelID { get; set; }
     public long ChannelFileChatID { get; set; }
     public long MaxAllowedUploadSize { get; set; }

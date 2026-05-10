@@ -3,8 +3,8 @@
  * Any changes made to this file can be lost when this file is regenerated.
  */
 
-import {RarbgPeerInfo} from "./rarbg-peer-info";
-import {RarbgImdbInfo} from "./rarbg-imdb-info";
+import { RarbgPeerInfo } from "./rarbg-peer-info";
+import { RarbgImdbInfo } from "./rarbg-imdb-info";
 
 export class RarbgDetails {
     torrent: string;

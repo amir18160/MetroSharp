@@ -24,11 +24,12 @@ public class Handler : IRequestHandler<Command, Result<Unit>>
 
     public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
     {
-        var targetUser = await _userManager.FindByNameAsync(request.Username);
+        var targetUser = await _userManager.FindByIdAsync(request.Id.ToString());
         if (targetUser == null)
             return Result<Unit>.Failure("Target user not found.");
 
         var targetRoles = await _userManager.GetRolesAsync(targetUser);
+        
         if (targetRoles.Any(role => role is "Admin" or "Owner"))
             return Result<Unit>.Failure("An admin account cannot be disabled.");
 

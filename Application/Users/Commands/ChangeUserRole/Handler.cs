@@ -1,5 +1,6 @@
 using Application.Core;
 using Application.Interfaces;
+using Domain.Core;
 using Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
@@ -22,7 +23,7 @@ public class Handler : IRequestHandler<Command, Result<Unit>>
 
     public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
     {
-        var targetUser = await _userManager.FindByNameAsync(request.Username);
+        var targetUser = await _userManager.FindByIdAsync(request.UserId);
 
         if (targetUser == null) return Result<Unit>.Failure("Target user not found.");
 
@@ -37,7 +38,14 @@ public class Handler : IRequestHandler<Command, Result<Unit>>
 
 
         var addResult = await _userManager.AddToRoleAsync(targetUser, request.NewRole);
+        
         if (!addResult.Succeeded) return Result<Unit>.Failure("Failed to add new role.");
+
+        if (request.NewRole == Roles.Admin && addResult.Succeeded && !targetUser.IsConfirmed)
+        {
+            targetUser.IsConfirmed = true;
+            await _userManager.UpdateAsync(targetUser);
+        }
 
         return Result<Unit>.Success(Unit.Value);
     }

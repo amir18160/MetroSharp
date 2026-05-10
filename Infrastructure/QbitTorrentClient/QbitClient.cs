@@ -23,6 +23,12 @@ public class QbitClient : IQbitClient
         _qbitTorrentSettings = qbitTorrentSettings.Value;
         _logger = logger;
 
+        if (!_qbitTorrentSettings.IsEnabled)
+        {
+            _logger.LogInformation("QBittorrent client is disabled duo to setting. Qbit Initialization aborted.");
+            return;
+        }
+        
         _logger.LogInformation("Initializing QbitClient with settings: {@Settings}", _qbitTorrentSettings);
         InitializeClient();
         _logger.LogInformation("QbitClient initialized successfully.");

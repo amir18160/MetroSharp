@@ -1,5 +1,11 @@
 ﻿# do these steps in order to avoid any problem:
 
+- copy these files to the server:
+        "/etc/ssl/cf_origin.pem"
+        "/etc/ssl/cf_origin.key"
+        
+- server user most be named as "metro" otherwise you need to change paths in appsettings.json
 - run "1_requirements.h" and make sure it was succeeded
 - get an api key from prowlarr in put in appsettings.json
+- change password in qbittorrent-nox and set new password in appsettings.json
 - run "2_manage_api.h"

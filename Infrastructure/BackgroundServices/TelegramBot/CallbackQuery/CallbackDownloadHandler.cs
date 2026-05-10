@@ -1,5 +1,6 @@
 using System.Text;
 using Domain.Entities;
+using Domain.Enums;
 using Domain.Models.TelegramBot.Messages;
 using Infrastructure.BackgroundServices.TelegramBot.Configs;
 using Infrastructure.BackgroundServices.TelegramBot.Utilities;
@@ -64,8 +65,12 @@ public class CallbackDownloadHandler
                 BuildReplyParameters(callbackQuery));
             return;
         }
-
-        if (omdbItem.Documents != null && omdbItem.Seasons.Count == 0)
+        
+        var notAvailable = 
+            omdbItem.Type == OmdbItemType.Movie && omdbItem.Documents.Count == 0 ||
+            omdbItem.Type == OmdbItemType.Series && omdbItem.Seasons.Count == 0;
+            
+        if (notAvailable)
         {
             await _bot.SendMessage(callbackQuery.user_id, _messages.CallbackQueryResponse.TitleNotAvailable,
                 ParseMode.Html, BuildReplyParameters(callbackQuery));

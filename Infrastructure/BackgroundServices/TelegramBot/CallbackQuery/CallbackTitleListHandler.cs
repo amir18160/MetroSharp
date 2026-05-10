@@ -2,8 +2,11 @@ using System.Text;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Models.TelegramBot.Messages;
+using Infrastructure.BackgroundServices.TelegramBot.Configs;
 using Infrastructure.Utilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Persistence;
 
 namespace Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
@@ -13,12 +16,15 @@ public class CallbackTitleListHandler
     private readonly DataContext _context;
     private readonly WTelegram.Bot _bot;
     private readonly BotMessages _messages;
+    private readonly TelegramBotSettings _settings;
 
-    public CallbackTitleListHandler(WTelegram.Bot bot, DataContext context, BotMessages messages)
+    public CallbackTitleListHandler(WTelegram.Bot bot, DataContext context, BotMessages messages,
+        IOptions<TelegramBotSettings> settings)
     {
         _bot = bot;
         _context = context;
         _messages = messages;
+        _settings = settings.Value;
     }
 
     public async Task HandleRecommendedTitles(TL.UpdateBotCallbackQuery callbackQuery)
@@ -26,7 +32,15 @@ public class CallbackTitleListHandler
         var imdbItems = await _context.OmdbItems
             .Where(x => x.Tags.Any(y => y.Type == TagType.Recommended))
             .Include(x => x.Tags)
+            .OrderByDescending(x => x.Year)
             .ToListAsync();
+
+        if (imdbItems.Count == 0)
+        {
+            await _bot.SendMessage(callbackQuery.user_id, _messages.CallbackQueryResponse.EmptyList,
+                Telegram.Bot.Types.Enums.ParseMode.Html);
+            return;
+        }
 
         var messages = CreateTitleListMessages(imdbItems);
 
@@ -39,7 +53,15 @@ public class CallbackTitleListHandler
         var imdbItems = await _context.OmdbItems
             .Where(x => x.Tags.Any(y => y.Type == TagType.New))
             .Include(x => x.Tags)
+            .OrderByDescending(x => x.Year)
             .ToListAsync();
+
+        if (imdbItems.Count == 0)
+        {
+            await _bot.SendMessage(callbackQuery.user_id, _messages.CallbackQueryResponse.EmptyList,
+                Telegram.Bot.Types.Enums.ParseMode.Html);
+            return;
+        }
 
         var messages = CreateTitleListMessages(imdbItems);
 
@@ -61,7 +83,8 @@ public class CallbackTitleListHandler
             var yearPart = item.omdbItem.Year > 0 ? $" ({item.omdbItem.Year})" : string.Empty;
 
             var titleWithYear = $"{item.omdbItem.Title}{yearPart}";
-            var link = $"https://t.me/MetroDBBot?start=imdbId={item.omdbItem.ImdbId}";
+
+            var link = $"https://t.me/{_settings.BotUsername}?start=imdbId={item.omdbItem.ImdbId}";
             sb.AppendLine($"<b>{item.index + 1}. <a href=\"{link}\">{titleWithYear}</a></b>");
 
             var rating = item.omdbItem.ImdbRating?.ToString("0.0") ?? "N/A";

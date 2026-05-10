@@ -26,7 +26,7 @@ UBUNTU_VERSION=$(lsb_release -rs 2>/dev/null || echo 0.0)
 echo "Detected Ubuntu codename=${UBUNTU_CODENAME} version=${UBUNTU_VERSION} arch=${ARCH_RAW}"
 
 apt update
-apt install -y wget curl gnupg ca-certificates lsb-release software-properties-common apt-transport-https jq unzip pwsh || true
+apt install -y wget curl gnupg ca-certificates lsb-release software-properties-common apt-transport-https jq unzip || true
 
 #### helper: safe run with echo
 run() { echo "+ $*"; "$@"; }
@@ -208,6 +208,108 @@ EOF
 apt update
 apt install -y caddy || true
 systemctl enable --now caddy || true
+
+# configure caddy for reverse proxy
+echo
+echo "=== Configuring Caddy reverse-proxy for api/qbittorrent/prowlarr ==="
+
+CADDYFILE_PATH="/etc/caddy/Caddyfile"
+CF_CERT="/etc/ssl/cf_origin.pem"
+CF_KEY="/etc/ssl/cf_origin.key"
+
+# Ensure directory exists
+mkdir -p "$(dirname "$CADDYFILE_PATH")"
+
+if [ -f "$CF_CERT" ] && [ -f "$CF_KEY" ]; then
+  echo "Found Cloudflare Origin cert and key at $CF_CERT / $CF_KEY - writing Caddyfile using those files..."
+  cat > "$CADDYFILE_PATH" <<EOF
+api.metromoviez.ir {
+    route /* {
+        uri strip_prefix /
+        reverse_proxy localhost:5159/api{uri}
+    }
+    tls $CF_CERT $CF_KEY
+    encode gzip
+}
+
+public.metromoviez.ir {
+    reverse_proxy localhost:5159/public{uri}
+    tls $CF_CERT $CF_KEY
+    encode gzip
+}
+
+qbittorrent.metromoviez.ir {
+    reverse_proxy localhost:8083 {
+        header_up Host {host}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    tls $CF_CERT $CF_KEY
+    encode gzip
+}
+
+prowlarr.metromoviez.ir {
+    reverse_proxy localhost:9696 {
+        header_up Host {host}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    tls $CF_CERT $CF_KEY
+    encode gzip
+}
+EOF
+
+  # set safe permissions so caddy can read the cert
+  chown root:caddy "$CF_CERT" "$CF_KEY" || true
+  chmod 640 "$CF_CERT" "$CF_KEY" || true
+
+else
+  echo "Cloudflare origin cert/key not found at $CF_CERT and $CF_KEY."
+  echo "Writing fallback Caddyfile (note: with Cloudflare proxy enabled, ACME may fail)."
+  cat > "$CADDYFILE_PATH" <<'EOF'
+# Fallback Caddyfile — if Cloudflare proxy is ON, automatic Let's Encrypt may not work.
+# Recommended: create Cloudflare Origin CA cert and place at /etc/ssl/cf_origin.pem (+ key).
+api.metromoviez.ir {
+     route /* {
+            uri strip_prefix /
+            reverse_proxy localhost:5159/api{uri}
+     }
+    encode gzip
+}
+
+public.metromoviez.ir {
+    reverse_proxy localhost:5159/public{uri}
+    tls $CF_CERT $CF_KEY
+    encode gzip
+}
+
+
+qbittorrent.metromoviez.ir {
+    reverse_proxy localhost:8083 {
+        header_up Host {host}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    encode gzip
+}
+
+prowlarr.metromoviez.ir {
+    reverse_proxy localhost:9696 {
+        header_up Host {host}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    encode gzip
+}
+EOF
+  echo
+  echo "If Cloudflare proxy is enabled (orange cloud), create an Origin CA cert in Cloudflare and upload it to $CF_CERT and $CF_KEY, then re-run 'systemctl restart caddy'."
+fi
+
+# reload caddy to apply new config
+echo "Reloading caddy to apply new Caddyfile..."
+systemctl reload caddy || systemctl restart caddy || true
+
 
 #### 4) Install Prowlarr (latest linux-core-x64 release) ####
 echo

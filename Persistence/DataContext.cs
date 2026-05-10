@@ -23,7 +23,9 @@ public class DataContext : IdentityDbContext<User>
     public DbSet<BannedUser> BannedUsers { get; set; }
     public DbSet<Plan> Plans { get; set; }
     public DbSet<Subscription> Subscriptions { get; set; }
-
+    public DbSet<DocumentUsage> DocumentUsages { get; set; }
+    
+    
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -36,6 +38,7 @@ public class DataContext : IdentityDbContext<User>
             .HasForeignKey(s => s.UserId)
             .IsRequired();
 
+        
         // Subscription <-> Plan (one-to-many)
         builder.Entity<Subscription>()
             .HasOne(s => s.Plan)
@@ -55,10 +58,23 @@ public class DataContext : IdentityDbContext<User>
             .WithMany(u => u.EmailVerifications)
             .HasForeignKey(ev => ev.UserId);
 
+        // DocumentUsage <-> Document (one-to-many)
+        builder.Entity<DocumentUsage>()
+            .HasOne(ev => ev.Document)
+            .WithMany(d => d.DocumentUsages)
+            .HasForeignKey(ev => ev.DocumentId);
+        
+        // DocumentUsage <-> User (one-to-many)
+        builder.Entity<DocumentUsage>()
+            .HasOne(ev => ev.User)
+            .WithMany(d => d.DocumentUsages)
+            .HasForeignKey(ev => ev.UserId);
+
         // OMDb Item <-> Tag (one-to-many)
         builder.Entity<OmdbItem>()
             .HasMany(item => item.Tags)
             .WithOne(tag => tag.OmdbItem)
             .HasForeignKey(tag => tag.OmdbItemId);
+        
     }
 }

@@ -26,8 +26,10 @@ public class Document
     /**********************/
     public Guid? EpisodeId { get; set; }
     public Episode Episode { get; set; }
-
-
+    
     public Guid? OmdbItemId { get; set; }
     public OmdbItem OmdbItem { get; set; }
+    
+    
+    public ICollection<DocumentUsage> DocumentUsages { get; set; }
 }

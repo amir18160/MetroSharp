@@ -9,6 +9,7 @@ public class BotMessages
     public string AboutUs { get; set; }
     public string SearchTitles { get; set; }
     public string SupportUs { get; set; }
+    public string PleaseUpdate { get; set; }
     public Common Common { get; set; }
     public KeyboardButtons KeyboardButtons { get; set; }
     public CallbackButtons CallbackButtons { get; set; }
@@ -16,8 +17,9 @@ public class BotMessages
     public InlineQueryMessages InlineQueryMessages { get; set; }
     public InlineQuerySearchResponse InlineQuerySearchResponse { get; set; }
     public CallbackQueryResponse CallbackQueryResponse { get; set; }
-
     public ManuelMessagesResponse ManuelMessagesResponse { get; set; }
+    public Middlewares Middlewares { get; set; }
+    public List<string> OldKeyboardButtons { get; set; }
 }
 
 public class KeyboardButtons
@@ -54,6 +56,7 @@ public class CallbackQueryResponse
     public string SelectedSeason { set; get; }
     public string SelectedEpisode { set; get; }
     public string TitleNotAvailable { get; set; }
+    public string EmptyList { get; set; }
 }
 
 public class ErrorMessages
@@ -106,6 +109,7 @@ public class Common
     public string Share { get; set; }
     public string Yes { get; set; }
     public string No { get; set; }
+    public string Continue { get; set; }
 }
 
 public class ManuelMessagesResponse
@@ -115,4 +119,9 @@ public class ManuelMessagesResponse
     public string NewSeries { get; set; }
     public string UpdatedSeries { get; set; }
     public string Recommended { get; set; }
+}
+
+public class Middlewares
+{
+    public string PleaseJoin { get; set; }
 }

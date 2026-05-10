@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Persistence;
 using Persistence.Seeds;
 using Persistence.Seeds.OldMetroDbSeeder;
+using Serilog;
 
 namespace API.Extensions;
 
@@ -54,10 +55,9 @@ public static class ApplicationSetupExtensions
                 await SeedRoles.SeedUserRoles(services);
             }
 
-            var shouldSeedDataFromCsv =
-                isDevelopment &&
-                await dataContext.Database.EnsureCreatedAsync() &&
-                !await dataContext.OmdbItems.AnyAsync();
+            await dataContext.Database.EnsureCreatedAsync();
+            var isOmdbEmpty = !await dataContext.OmdbItems.AnyAsync();
+            var shouldSeedDataFromCsv = isDevelopment && isOmdbEmpty;
 
             if (shouldSeedDataFromCsv)
             {

@@ -6,10 +6,12 @@ using Infrastructure.BackgroundServices.TelegramBot.Command;
 using Infrastructure.BackgroundServices.TelegramBot.Configs;
 using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.BackgroundServices.TelegramBot.Keyboard;
+using Infrastructure.BackgroundServices.TelegramBot.Middlewares;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Telegram.Bot.Polling;
 using Telegram.Bot.Types.Enums;
 using WTelegram.Types;
 
@@ -51,10 +53,11 @@ public class TelegramBot : BackgroundService
         await _bot.DropPendingUpdates();
 
         _bot.WantUnknownTLUpdates = true;
+        _logger.LogInformation("Bot Want unknown TL updates: {wantUnknown}", _bot.WantUnknownTLUpdates);
 
         _bot.OnUpdate += OnUpdate;
         _bot.OnMessage += OnMessage;
-        _bot.OnError += (e, s) => Console.Error.WriteLineAsync(e.ToString());
+        _bot.OnError += OnError;
 
         _logger.LogInformation("Telegram Bot is initialized as {Username}", me.Username);
     }
@@ -84,35 +87,60 @@ public class TelegramBot : BackgroundService
             return;
         }
 
+        if (keyboardHandler.IsOldKeyboard(text))
+        {
+            await keyboardHandler.HandleAskUserToUpdate(message);
+            return;
+        }
+        
         if (ChosenInlineHandler.IsChosenInline(message)) await chosenInlineHandler.Handle(message);
     }
 
-    public async Task OnUpdate(Update update)
+    private async Task OnUpdate(Update update)
     {
         using var scope = _scopeFactory.CreateScope();
         var inlineQueryHandler = scope.ServiceProvider.GetRequiredService<InlineQueryHandler>();
         var callbackHandler = scope.ServiceProvider.GetRequiredService<CallbackHandler>();
-
-        if (update.Type == UpdateType.Unknown)
+        var joinCheck = scope.ServiceProvider.GetRequiredService<JoinCheck>();
+        
+        _logger.LogInformation("Telegram bot update received. Update type is {type}", update.Type.ToString());
+        _logger.LogInformation("TLUpdate type: {updateType}", update.TLUpdate);
+        
+        switch (update.TLUpdate)
         {
-            if (update.TLUpdate is TL.UpdateBotInlineQuery updateInlineQuery)
-            {
+            case TL.UpdateBotInlineQuery updateInlineQuery:
                 _logger.LogInformation("This is inline query {query}", updateInlineQuery.query);
                 await inlineQueryHandler.HandleInlineRequest(updateInlineQuery);
-            }
-            else if (update.TLUpdate is TL.UpdateBotCallbackQuery updateCallbackQuery)
-            {
+                break;
+            case TL.UpdateBotCallbackQuery updateCallbackQuery:
                 _logger.LogInformation("This is callback query data {data}: ",
                     Encoding.UTF8.GetString(updateCallbackQuery.data));
+                if (!await joinCheck.Check(updateCallbackQuery))
+                {
+                    break;
+                }
                 await callbackHandler.Handle(updateCallbackQuery);
-            }
-            else if (update.TLUpdate is TL.UpdateNewChannelMessage updateNewChannelMessage)
+                break;
+            case TL.UpdateNewChannelMessage updateNewChannelMessage:
             {
                 var handleForwardedMessages = scope.ServiceProvider.GetRequiredService<HandleForwardedFiles>();
                 var shouldHandleForwardedMessage =
                     await handleForwardedMessages.ShouldHandleMessage(updateNewChannelMessage);
-                if (shouldHandleForwardedMessage) await handleForwardedMessages.HandleAsync(updateNewChannelMessage);
+                if (shouldHandleForwardedMessage)
+                    await handleForwardedMessages.HandleAsync(updateNewChannelMessage);
+                break;
             }
+            default:
+                _logger.LogInformation("Unknown/Unhandled update type {updateType}", update.Type.ToString());
+                break;
         }
+    }
+
+    private Task OnError(Exception error, HandleErrorSource source)
+    {
+        _logger.LogError("Error inside Bot error handler: ");
+        _logger.LogError(error.Message);
+
+        return Task.CompletedTask;
     }
 }

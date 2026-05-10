@@ -25,7 +25,7 @@ public class Handler : IRequestHandler<Command, Result<Unit>>
 
     public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == request.UserId, cancellationToken);
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
         if (user == null) return Result<Unit>.Failure("No user found with that id.");
 
         if (user.UserName == _userAccessor.GetUserName()) return Result<Unit>.Failure("You cannot ban yourself.");

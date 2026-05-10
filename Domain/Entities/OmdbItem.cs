@@ -29,6 +29,8 @@ public class OmdbItem
     public ICollection<string> Writers { get; set; }
     public int? Year { get; set; }
 
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow; 
+
     /**********************/
     /***** Relations ******/
     /**********************/

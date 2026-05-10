@@ -206,6 +206,11 @@ sudo systemctl daemon-reload
 echo "Enabling and starting ${SERVICE_NAME}..."
 sudo systemctl enable --now "${SERVICE_NAME}"
 
+if command -v systemctl >/dev/null 2>&1; then
+  echo "Reloading Caddy to ensure proxy picks up API..."
+  sudo systemctl reload caddy || sudo systemctl restart caddy || true
+fi
+
 echo
 echo "Service ${SERVICE_NAME} should now be active. Checking status..."
 sudo systemctl status "${SERVICE_NAME}" --no-pager

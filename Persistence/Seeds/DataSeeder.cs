@@ -40,13 +40,12 @@ public class DataSeeder
         var plans = new Faker<Plan>()
             .RuleFor(p => p.Id, _ => Guid.NewGuid())
             .RuleFor(p => p.Title, f => $"{f.Commerce.ProductAdjective()} Plan")
-            .RuleFor(p => p.Code, f => f.Random.AlphaNumeric(6).ToUpper())
             .RuleFor(p => p.Length, f => f.PickRandom(7, 30, 90))
             .RuleFor(p => p.Price, f => f.Random.Int(10, 100))
-            .RuleFor(p => p.Discount, f => f.Random.Int(0, 30))
+            .RuleFor(p => p.DiscountPercent, f => f.Random.Int(0, 30))
             .RuleFor(p => p.DiscountReason, f => f.Commerce.ProductName())
-            .RuleFor(p => p.NumOfDownloads, f => f.Random.Int(10, 100))
-            .RuleFor(p => p.NumOfRequest, f => f.Random.Int(5, 50))
+            .RuleFor(p => p.NumberOfDownloads, f => f.Random.Int(10, 100))
+            .RuleFor(p => p.NumberOfRequest, f => f.Random.Int(5, 50))
             .Generate(5);
 
         await context.Plans.AddRangeAsync(plans);

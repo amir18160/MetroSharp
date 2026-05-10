@@ -7,10 +7,6 @@ public class QueryValidator : AbstractValidator<Query>
 {
     public QueryValidator()
     {
-        RuleFor(x => x.Email)
-            .EmailAddress()
-            .When(x => !string.IsNullOrWhiteSpace(x.Email));
-
         RuleFor(x => x.Role)
             .Must(role => role == "User" || role == "Admin" || role == "Owner")
             .WithMessage("Role must be either User, Admin, or Owner.")

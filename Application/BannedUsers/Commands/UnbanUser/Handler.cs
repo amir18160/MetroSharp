@@ -18,7 +18,7 @@ public class Handler : IRequestHandler<Command, Result<Unit>>
     {
         var user = await _context.Users
             .Include(x => x.BannedUser)
-            .FirstOrDefaultAsync(x => x.UserName == request.UserId, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == request.UserId, cancellationToken);
 
         if (user == null)
             return Result<Unit>.Failure("No user found with that ID.");

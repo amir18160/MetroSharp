@@ -1,11 +1,13 @@
 using Application.BannedUsers.Queries.GetBannedUsers;
 using Application.Documents;
-using Application.OMDb;
+using Application.OMDb.DTOs;
+using Application.Plans.Queries;
 using Application.Scrapers.Queries.GetLatestTorrents;
+using Application.Subscriptions;
 using Application.Tags;
 using Application.Tasks.Queries.GetTasks;
 using Application.Users.Commands.Update;
-using Application.Users.Queries.GetSingleUser;
+using Application.Users.Queries;
 using AutoMapper;
 using Domain.Entities;
 using Domain.Enums;
@@ -32,14 +34,16 @@ public class MappingProfiles : Profile
 
         CreateMap<Users.Commands.ActiveDeactive.Command, User>()
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => src.Activate))
-            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Username));
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id));
 
 
         CreateMap<User, UserDetailsDto>()
-            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt.ToString("O")))
-            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt.ToString("O")))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
             .ForMember(dest => dest.IsBanned, opt => opt.Ignore())
-            .ForMember(dest => dest.HasActiveSubscription, opt => opt.Ignore());
+            .ForMember(dest => dest.CurrentActiveSubscription, opt => opt.Ignore());
+
+        CreateMap<User, UserBase>();
 
 
         CreateMap<Users.Commands.UpdateUsersByAdmin.Command, User>()
@@ -62,17 +66,52 @@ public class MappingProfiles : Profile
             .ForMember(d => d.ImdbId, opt => opt.MapFrom(s => s.ImdbId))
             .ForMember(d => d.Title, opt => opt.MapFrom(s => s.Title))
             .ForMember(d => d.Poster, opt => opt.MapFrom(s => s.Poster))
-            .ForMember(d => d.ImdbRating, opt => opt.MapFrom(s => s.ImdbRating))
             .ForMember(d => d.ImdbVotes, opt => opt.MapFrom(s => s.ImdbVotes))
             .ForMember(d => d.Type, opt => opt.MapFrom(s => s.Type))
-            .ForMember(d => d.Year, opt => opt.MapFrom(s => s.Year));
+            .ForMember(d => d.Year, opt => opt.MapFrom(s => s.Year))
+            .ForMember(d => d.ImdbRating,
+                opt => opt.MapFrom(s =>
+                    s.ImdbRating.HasValue
+                        ? Math.Round((decimal)s.ImdbRating.Value, 1, MidpointRounding.AwayFromZero)
+                        : (decimal?)null));
 
-        // map Tag -> TagDto and map the navigation OmdbItem -> OmdbSummary
+        CreateMap<OmdbItem, OmdbItemDto>()
+            .PreserveReferences()
+            .ForMember(dest => dest.Seasons, opt => opt.MapFrom(src => src.Seasons))
+            .ForMember(dest => dest.Documents, opt => opt.MapFrom(src => src.Documents))
+            .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => src.Tags))
+            .ForMember(d => d.ImdbRating,
+                opt => opt.MapFrom(s =>
+                    s.ImdbRating.HasValue
+                        ? Math.Round((decimal)s.ImdbRating.Value, 1, MidpointRounding.AwayFromZero)
+                        : (decimal?)null));
+
+        CreateMap<Season, SeasonDto>();
+
+        CreateMap<Subscription, SubscriptionDto>();
+        CreateMap<Subscription, UserSubscriptionDto>();
+        
+        CreateMap<Plan, PlanDto>();
+        CreateMap<Plans.Commands.UpdatePlan.Command, Plan>()
+            .ForMember(dest => dest.Title, opt => opt.Condition((src, dest) => src.Title != null))
+            .ForMember(dest => dest.Length, opt => opt.Condition((src, dest) => src.Length.HasValue))
+            .ForMember(dest => dest.Price, opt => opt.Condition((src, dest) => src.Price.HasValue))
+            .ForMember(dest => dest.DiscountPercent, opt => opt.Condition((src, dest) => src.DiscountPercent.HasValue))
+            .ForMember(dest => dest.DiscountReason, opt => opt.Condition((src, dest) => src.DiscountReason != null))
+            .ForMember(dest => dest.NumberOfDownloads,
+                opt => opt.Condition((src, dest) => src.NumberOfDownloads.HasValue))
+            .ForMember(dest => dest.NumberOfRequest, opt => opt.Condition((src, dest) => src.NumberOfRequest.HasValue))
+            .ForMember(dest => dest.IsActive, opt => opt.Condition((src, dest) => src.IsActive.HasValue));
+
+        CreateMap<Document, DocumentDto>();
+        CreateMap<Tag, TagDtoNoSummary>();
+
         CreateMap<Tag, TagDto>()
-            // the Tag entity has property OmdbItem, but TagDto property is OmdbSummary
             .ForMember(d => d.OmdbSummary, opt => opt.MapFrom(s => s.OmdbItem));
 
         CreateMap<Tasks.Commands.AddTorrentTask.Command, TorrentTask>();
+
+        CreateMap<Plans.Commands.CreatePlan.Command, Plan>();
 
         CreateMap<RarbgPreview, AbstractedLatestTorrent>()
             .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))

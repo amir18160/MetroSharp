@@ -1,4 +1,5 @@
 using Application.OMDb;
+using Application.OMDb.DTOs;
 using Domain.Enums;
 
 namespace Application.Tags;

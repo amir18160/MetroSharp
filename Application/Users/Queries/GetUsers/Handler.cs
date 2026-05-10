@@ -20,7 +20,8 @@ public class Handler : IRequestHandler<Query, Result<PagedList<UserBase>>>
             from userRole in urj.DefaultIfEmpty()
             join role in _context.Roles on userRole.RoleId equals role.Id into rj
             from role in rj.DefaultIfEmpty()
-            select new { user, role.Name };
+            select new { user, RoleName = role.Name };
+
 
         if (!string.IsNullOrWhiteSpace(request.Name)) query = query.Where(x => x.user.Name.Contains(request.Name));
 
@@ -29,7 +30,7 @@ public class Handler : IRequestHandler<Query, Result<PagedList<UserBase>>>
 
         if (!string.IsNullOrWhiteSpace(request.Email)) query = query.Where(x => x.user.Email.Contains(request.Email));
 
-        if (!string.IsNullOrWhiteSpace(request.Role)) query = query.Where(x => x.Name == request.Role);
+        if (!string.IsNullOrWhiteSpace(request.Role)) query = query.Where(x => x.RoleName == request.Role);
 
         if (request.IsActive.HasValue) query = query.Where(x => x.user.IsActive == request.IsActive);
 
@@ -47,7 +48,7 @@ public class Handler : IRequestHandler<Query, Result<PagedList<UserBase>>>
             IsActive = x.user.IsActive,
             IsConfirmed = x.user.IsConfirmed,
             CreatedAt = x.user.CreatedAt,
-            Role = x.Name
+            Role = x.RoleName
         }).AsQueryable();
 
         var pagedList = await PagedList<UserBase>.CreateAsync(
