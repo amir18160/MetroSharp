@@ -4,8 +4,10 @@ using API.DTOs;
 using API.Services;
 using Domain.Core;
 using Domain.Entities;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -84,7 +86,7 @@ public class AccountController : ControllerBase
 
         return Ok(ApiResponse<UserDto>.Success(await CreateUserDto(user, role)));
     }
-
+    
 
     private async Task<UserDto> CreateUserDto(User user, string role)
     {

@@ -44,7 +44,8 @@ public class DataSeeder
             .RuleFor(p => p.Price, f => f.Random.Int(10, 100))
             .RuleFor(p => p.DiscountPercent, f => f.Random.Int(0, 30))
             .RuleFor(p => p.DiscountReason, f => f.Commerce.ProductName())
-            .RuleFor(p => p.NumberOfDownloads, f => f.Random.Int(10, 100))
+            .RuleFor(p => p.NumberOfDirectLinks, f => f.Random.Int(10, 100))
+            .RuleFor(p => p.NumberOfFileDownloads, f => f.Random.Int(10, 100))
             .RuleFor(p => p.NumberOfRequest, f => f.Random.Int(5, 50))
             .Generate(5);
 

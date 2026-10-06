@@ -12,4 +12,10 @@ public class Season
     public OmdbItem OmdbItem { get; set; }
 
     public ICollection<Episode> Episodes { get; set; } = new List<Episode>();
+
+    public override string ToString()
+    {
+        return $"s:{SeasonNumber}";
+    }
+    
 }

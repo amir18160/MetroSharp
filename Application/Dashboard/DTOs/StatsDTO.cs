@@ -1,4 +1,4 @@
-﻿namespace Application.Dashboard.Queries.GetStats;
+﻿namespace Application.Dashboard.DTOs;
 
 public class StatsDto
 {

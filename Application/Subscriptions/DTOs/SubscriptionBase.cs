@@ -1,6 +1,6 @@
 ﻿using Domain.Enums;
 
-namespace Application.Subscriptions;
+namespace Application.Subscriptions.DTOs;
 
 public class SubscriptionBase
 {

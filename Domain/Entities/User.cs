@@ -16,6 +16,13 @@ public class User : IdentityUser
 
     public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
     public ICollection<EmailVerification> EmailVerifications { get; set; } = new List<EmailVerification>();
-    public ICollection<DocumentUsage>  DocumentUsages { get; set; } = new  List<DocumentUsage>();
+    public ICollection<DocumentUsage> DocumentUsages { get; set; } = new List<DocumentUsage>();
+    public ICollection<MediaRequest> CreatedRequests { get; set; } = new List<MediaRequest>();
+    public ICollection<MediaRequest> RespondedRequests { get; set; } = new List<MediaRequest>();
     public BannedUser BannedUser { get; set; }
+
+    public override string ToString()
+    {
+        return $"{UserName}|{Email}";
+    }
 }

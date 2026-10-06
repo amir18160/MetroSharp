@@ -1,12 +1,14 @@
 using Application.BannedUsers.Queries.GetBannedUsers;
-using Application.Documents;
+using Application.Documents.DTOs;
 using Application.OMDb.DTOs;
-using Application.Plans.Queries;
+using Application.Plans.DTOs;
 using Application.Scrapers.Queries.GetLatestTorrents;
-using Application.Subscriptions;
-using Application.Tags;
+using Application.Subscriptions.DTOs;
+using Application.Tags.DTOs;
+using Application.Tasks.DTOs;
 using Application.Tasks.Queries.GetTasks;
 using Application.Users.Commands.Update;
+using Application.Users.DTOs;
 using Application.Users.Queries;
 using AutoMapper;
 using Domain.Entities;
@@ -21,8 +23,6 @@ public class MappingProfiles : Profile
 {
     public MappingProfiles()
     {
-        // If you want to skip mapping default DateTime values, you must configure this per property in CreateMap calls.
-
         CreateMap<Command, User>()
             .ForMember(dest => dest.Id, opt => opt.Ignore())
             .ForMember(dest => dest.IsActive, opt => opt.Ignore())
@@ -90,7 +90,7 @@ public class MappingProfiles : Profile
 
         CreateMap<Subscription, SubscriptionDto>();
         CreateMap<Subscription, UserSubscriptionDto>();
-        
+
         CreateMap<Plan, PlanDto>();
         CreateMap<Plans.Commands.UpdatePlan.Command, Plan>()
             .ForMember(dest => dest.Title, opt => opt.Condition((src, dest) => src.Title != null))
@@ -98,8 +98,10 @@ public class MappingProfiles : Profile
             .ForMember(dest => dest.Price, opt => opt.Condition((src, dest) => src.Price.HasValue))
             .ForMember(dest => dest.DiscountPercent, opt => opt.Condition((src, dest) => src.DiscountPercent.HasValue))
             .ForMember(dest => dest.DiscountReason, opt => opt.Condition((src, dest) => src.DiscountReason != null))
-            .ForMember(dest => dest.NumberOfDownloads,
-                opt => opt.Condition((src, dest) => src.NumberOfDownloads.HasValue))
+            .ForMember(dest => dest.NumberOfDirectLinks,
+                opt => opt.Condition((src, dest) => src.NumberOfDirectLinks.HasValue))
+            .ForMember(dest => dest.NumberOfFileDownloads,
+                opt => opt.Condition((src, dest) => src.NumberOfFileDownloads.HasValue))
             .ForMember(dest => dest.NumberOfRequest, opt => opt.Condition((src, dest) => src.NumberOfRequest.HasValue))
             .ForMember(dest => dest.IsActive, opt => opt.Condition((src, dest) => src.IsActive.HasValue));
 

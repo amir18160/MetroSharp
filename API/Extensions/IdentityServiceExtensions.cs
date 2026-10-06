@@ -46,8 +46,16 @@ public static class IdentityServiceExtensions
                 policy.RequireRole(Roles.Owner, Roles.Admin))
             .AddPolicy(RolesPolicy.Self, policy =>
                 policy.Requirements.Add(new SameUserRequirement())
-            );
+            ).AddPolicy(RolesPolicy.OwnerOnly, policy => policy.RequireRole(Roles.Owner));
 
+        // services.ConfigureApplicationCookie(options =>
+        // {
+        //     options.Cookie.Name = ".AspNetCore.Identity.Application";
+        //     options.LoginPath = "/login";
+        //     options.ExpireTimeSpan = TimeSpan.FromDays(7);
+        //     options.SlidingExpiration = true;
+        // });
+        //
         services.AddSingleton<IAuthorizationHandler, SameUserHandler>();
 
         return services;

@@ -1,7 +1,6 @@
-using Application.Subscriptions;
-using Application.Subscriptions.Queries;
+using Application.Subscriptions.DTOs;
 
-namespace Application.Users.Queries;
+namespace Application.Users.DTOs;
 
 public class UserDetailsDto : UserBase
 {

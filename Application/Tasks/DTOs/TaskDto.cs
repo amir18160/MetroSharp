@@ -1,4 +1,4 @@
-namespace Application.Tasks.Queries.GetTasks;
+namespace Application.Tasks.DTOs;
 
 public class TaskDto
 {

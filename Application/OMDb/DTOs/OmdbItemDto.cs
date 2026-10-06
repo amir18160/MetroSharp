@@ -1,4 +1,5 @@
 ﻿using Application.Documents;
+using Application.Documents.DTOs;
 using Application.Tags;
 using Domain.Enums;
 

@@ -1,0 +1,27 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using Persistence
+@inherits LayoutComponentBase
+@inject SignInManager<DataContext> SignInManager
+@inject NavigationManager Navigation
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-2 bg-light vh-100">
+            <div class="nav flex-column nav-pills pt-3">
+                <a class="nav-link" href="/coreadmin">Admin Panel</a>
+                <button class="nav-link btn btn-link text-start" @onclick="Logout">Logout</button>
+            </div>
+        </div>
+        <div class="col-md-10 pt-3">
+            @Body
+        </div>
+    </div>
+</div>
+
+@code {
+    private async Task Logout()
+    {
+        await SignInManager.SignOutAsync();
+        Navigation.NavigateTo("/login", true);
+    }
+}

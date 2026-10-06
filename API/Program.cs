@@ -1,6 +1,9 @@
 using API.Extensions;
 using API.Middleware;
 using Domain.Core;
+using Domain.Entities;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
 using Serilog;
 
 Log.Logger = new LoggerConfiguration()
@@ -24,7 +27,7 @@ try
             Directory.CreateDirectory(Path.Combine(wwwrootPath, "public"));
         }
     }
-    
+
     builder.Host.UseSerilog((context, services, configuration) =>
     {
         configuration
@@ -34,7 +37,7 @@ try
 
         if (context.HostingEnvironment.IsDevelopment()) configuration.WriteTo.Console();
     });
-    
+
     builder.Services.AddControllers();
     builder.Services.AddSwagger();
     builder.Services.AddApplicationServices(builder.Configuration);
@@ -42,8 +45,7 @@ try
     builder.Services.AddCorsPolicy(CorsPolicy.AllowOrigins, builder.Configuration, builder.Environment);
     builder.Services.AddLocalization(builder.Configuration, builder.Environment);
     builder.Services.AddTelegramService(builder.Configuration);
-    
-    
+
     var app = builder.Build();
 
     app.UseSerilogRequestLogging();
@@ -71,7 +73,11 @@ try
 
     app.MapControllers();
     app.MapDefaultControllerRoute(); // core admin
+
+    app.MapBlazorHub();
     
+    app.MapFallbackToPage("/_Host");
+
     await app.ConfigureDatabaseAndSeedDataAsync();
 
     app.Run();

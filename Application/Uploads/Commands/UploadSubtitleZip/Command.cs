@@ -1,5 +1,5 @@
 using Application.Core;
-using Application.Uploads.Commands.CommonDTOs;
+using Application.Uploads.DTOs;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 

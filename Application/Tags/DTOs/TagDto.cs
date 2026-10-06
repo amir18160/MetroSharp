@@ -1,8 +1,7 @@
-using Application.OMDb;
 using Application.OMDb.DTOs;
 using Domain.Enums;
 
-namespace Application.Tags;
+namespace Application.Tags.DTOs;
 
 public class TagDto
 {

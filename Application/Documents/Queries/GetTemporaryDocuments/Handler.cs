@@ -1,4 +1,5 @@
 ﻿using Application.Core;
+using Application.Documents.DTOs;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using MediatR;

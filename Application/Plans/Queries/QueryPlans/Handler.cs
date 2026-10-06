@@ -1,7 +1,7 @@
 ﻿using Application.Core;
+using Application.Plans.DTOs;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
-using Domain.Entities;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Persistence;
@@ -21,7 +21,8 @@ public class Handler : IRequestHandler<Query, Result<List<PlanDto>>>
 
     public async Task<Result<List<PlanDto>>> Handle(Query request, CancellationToken cancellationToken)
     {
-        var allPlans = await _dataContext.Plans.ProjectTo<PlanDto>(_mapper.ConfigurationProvider).ToListAsync(cancellationToken);
+        var allPlans = await _dataContext.Plans.ProjectTo<PlanDto>(_mapper.ConfigurationProvider)
+            .ToListAsync(cancellationToken);
         return Result<List<PlanDto>>.Success(allPlans);
     }
 }

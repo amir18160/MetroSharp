@@ -13,4 +13,9 @@ public class Tag
 
     public Guid OmdbItemId { get; set; }
     public OmdbItem OmdbItem { get; set; }
+
+    public override string ToString()
+    {
+        return $"{Type}|{IsPinned}|{OmdbItem}";
+    }
 }

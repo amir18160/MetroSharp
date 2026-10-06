@@ -1,4 +1,5 @@
 using Application.Core;
+using Application.Tasks.DTOs;
 using Application.Tasks.Queries.GetTasks;
 using AutoMapper;
 using MediatR;

@@ -1,4 +1,5 @@
 ﻿using Application.Core;
+using Application.Documents.DTOs;
 using MediatR;
 
 namespace Application.Documents.Queries.GetTemporaryDocuments;

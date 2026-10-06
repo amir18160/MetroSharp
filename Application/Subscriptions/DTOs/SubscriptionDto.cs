@@ -1,7 +1,9 @@
-﻿using Application.Plans.Queries;
+﻿using Application.Plans.DTOs;
+using Application.Plans.Queries;
+using Application.Users.DTOs;
 using Application.Users.Queries;
 
-namespace Application.Subscriptions;
+namespace Application.Subscriptions.DTOs;
 
 public class SubscriptionDto: SubscriptionBase
 {

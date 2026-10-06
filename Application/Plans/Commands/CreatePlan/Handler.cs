@@ -16,7 +16,7 @@ public class Handler : IRequestHandler<Command, Result<Unit>>
         _dataContext = dataContext;
         _mapper = mapper;
     }
-    
+
     public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
     {
         var newPlan = _mapper.Map<Plan>(request);

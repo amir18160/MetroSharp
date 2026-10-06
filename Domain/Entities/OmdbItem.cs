@@ -37,4 +37,11 @@ public class OmdbItem
     public ICollection<Season> Seasons { get; set; } = new List<Season>();
     public ICollection<Document> Documents { get; set; } = new List<Document>();
     public ICollection<Tag> Tags { get; set; } = new List<Tag>();
+
+
+    public override string ToString()
+    {
+        var type = Type == OmdbItemType.Movie ? "M" : "S";
+        return $"{type}|{Title} ({Year})";
+    }
 }

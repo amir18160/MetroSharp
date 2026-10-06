@@ -28,7 +28,10 @@ using Infrastructure.TMDbService;
 using Infrastructure.FileStorageService.Models;
 using Infrastructure.FileStorageService;
 using System.Text.Json;
+using Domain.Core;
+using Domain.Entities;
 using Domain.Models.TelegramBot.Messages;
+using DotNetEd.CoreAdmin;
 using Infrastructure.BackgroundServices.DatabaseBackupService;
 using Infrastructure.BackgroundServices.SitemapGeneratorService;
 using Infrastructure.BackgroundServices.TelegramBot.Admin;
@@ -38,8 +41,12 @@ using Infrastructure.BackgroundServices.TelegramBot.InlineQuery;
 using Infrastructure.BackgroundServices.TelegramBot.CallbackQuery;
 using Infrastructure.BackgroundServices.TelegramBot.Messages;
 using Infrastructure.BackgroundServices.TelegramBot.Middlewares;
+using Infrastructure.DocumentUsageService;
+using Infrastructure.DocumentUsageService.Models;
 using Infrastructure.ImageEditorService;
-using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.OpenApi;
 using Quartz;
 
 
@@ -52,9 +59,10 @@ public static class ApplicationServiceExtensions
         services.AddOpenApi("internal");
 
         services.AddDbContext<DataContext>(opt => { opt.UseSqlite(config.GetConnectionString("DataContext")); });
-        
-        services.AddCoreAdmin();
-        
+
+        services.AddRazorPages();
+        services.AddServerSideBlazor();
+
         services.AddDbContext<DownloadContext>(opt =>
         {
             opt.UseSqlite(config.GetConnectionString("DownloadContext"));
@@ -108,6 +116,7 @@ public static class ApplicationServiceExtensions
         services.AddScoped<ITMDbService, TMDbService>();
         services.AddScoped<IFileStorageService, FileStorageService>();
         services.AddScoped<ITelegramManuelMessages, ManuelMessages>();
+        services.AddScoped<IDocumentUsageService, DocumentUsageService>();
 
         services.AddScoped<ImageEditorService>();
 
@@ -130,6 +139,7 @@ public static class ApplicationServiceExtensions
         services.Configure<BackupSettings>(config.GetSection("BackupSettings"));
         services.Configure<SitemapSettings>(config.GetSection("SitemapSettings"));
         services.Configure<ImageEditorSettings>(config.GetSection("ImageEditorSettings"));
+        services.Configure<FreePlanSettings>(config.GetSection("FreePlanSettings"));
 
         return services;
     }
@@ -240,23 +250,10 @@ public static class ApplicationServiceExtensions
                 Description = "Enter your JWT token in this format: Bearer {your token}"
             });
 
-            c.AddSecurityRequirement(new OpenApiSecurityRequirement
-            {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
-                    Array.Empty<string>()
-                }
-            });
 
             c.CustomSchemaIds(type => type.FullName);
         });
         return services;
     }
+    
 }

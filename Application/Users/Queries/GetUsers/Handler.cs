@@ -1,4 +1,5 @@
 using Application.Core;
+using Application.Users.DTOs;
 using MediatR;
 using Persistence;
 

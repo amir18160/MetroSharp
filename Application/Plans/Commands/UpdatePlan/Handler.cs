@@ -20,10 +20,7 @@ public class Handler : IRequestHandler<Command, Result<Unit>>
     public async Task<Result<Unit>> Handle(Command request, CancellationToken cancellationToken)
     {
         var plan = await _dataContext.Plans.FirstOrDefaultAsync(x => x.Id == request.Id, cancellationToken);
-        if (plan == null)
-        {
-            return null;
-        }
+        if (plan == null) return null;
         _mapper.Map(request, plan);
         var success = await _dataContext.SaveChangesAsync(cancellationToken) > 0;
         return !success ? Result<Unit>.Failure("Something went wrong") : Result<Unit>.Success(Unit.Value);

@@ -32,4 +32,10 @@ public class Document
     
     
     public ICollection<DocumentUsage> DocumentUsages { get; set; }
+
+    public override string ToString()
+    {
+        var type = Type == DocumentType.Episode ? "E" : "M";
+        return $"{type}|{FileName}";
+    }
 }

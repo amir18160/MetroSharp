@@ -1,6 +1,8 @@
 using Application.Core;
 using Application.Subscriptions;
+using Application.Subscriptions.DTOs;
 using Application.Subscriptions.Queries;
+using Application.Users.DTOs;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Domain.Entities;

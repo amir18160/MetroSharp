@@ -1,6 +1,6 @@
 using Application.Core;
 using Application.Interfaces;
-using Application.Uploads.Commands.CommonDTOs;
+using Application.Uploads.DTOs;
 using Domain.Enums;
 using MediatR;
 using Microsoft.Extensions.Logging;

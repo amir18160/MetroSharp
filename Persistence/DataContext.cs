@@ -24,6 +24,7 @@ public class DataContext : IdentityDbContext<User>
     public DbSet<Plan> Plans { get; set; }
     public DbSet<Subscription> Subscriptions { get; set; }
     public DbSet<DocumentUsage> DocumentUsages { get; set; }
+    public DbSet<MediaRequest> MediaRequests { get; set; }
     
     
 
@@ -37,7 +38,6 @@ public class DataContext : IdentityDbContext<User>
             .WithMany(u => u.Subscriptions)
             .HasForeignKey(s => s.UserId)
             .IsRequired();
-
         
         // Subscription <-> Plan (one-to-many)
         builder.Entity<Subscription>()
@@ -69,6 +69,18 @@ public class DataContext : IdentityDbContext<User>
             .HasOne(ev => ev.User)
             .WithMany(d => d.DocumentUsages)
             .HasForeignKey(ev => ev.UserId);
+        
+        // MediaRequest-Creator <-> User (one-to-many)
+        builder.Entity<MediaRequest>()
+            .HasOne(mr => mr.CreatorUser)
+            .WithMany(d => d.CreatedRequests)
+            .HasForeignKey(ev => ev.CreatorUserId);
+        
+        // MediaRequest-Responser <-> User (one-to-many)
+        builder.Entity<MediaRequest>()
+            .HasOne(mr => mr.ResponserUser)
+            .WithMany(d => d.RespondedRequests)
+            .HasForeignKey(ev => ev.ResponserUser);
 
         // OMDb Item <-> Tag (one-to-many)
         builder.Entity<OmdbItem>()

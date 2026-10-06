@@ -1,4 +1,4 @@
-namespace Application.Uploads.Commands.CommonDTOs;
+namespace Application.Uploads.DTOs;
 
 public class SubtitleUploadResultDto
 {

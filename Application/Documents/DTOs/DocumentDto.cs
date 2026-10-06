@@ -1,6 +1,6 @@
 ﻿using Domain.Enums;
 
-namespace Application.Documents;
+namespace Application.Documents.DTOs;
 
 public class DocumentDto
 {

@@ -1,3 +1,5 @@
+using Application.Tags.DTOs;
+
 namespace Application.Tags.Queries.GetTags;
 
 public class TagsFeedDto

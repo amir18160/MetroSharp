@@ -1,6 +1,4 @@
-﻿using System.Security.AccessControl;
-
-namespace Application.Plans.Queries;
+﻿namespace Application.Plans.DTOs;
 
 public class PlanDto
 {
@@ -10,8 +8,8 @@ public class PlanDto
     public int Price { get; set; }
     public int DiscountPercent { get; set; } = 0;
     public string DiscountReason { get; set; }
-    public int NumberOfDownloads { get; set; }
+    public int NumberOfFileDownloads { get; set; }
+    public int NumberOfDirectLinks { get; set; }
     public int NumberOfRequest { get; set; }
-    public bool IsActive  { get; set; }
-    
+    public bool IsActive { get; set; }
 }
