@@ -3,7 +3,7 @@
 [توضیحات فارسی، کلیک کنید](README.fa.md)
 
 
-> AI was used to polish this README file, but project itself is not completely ai written.
+> AI was used to polish this README file
     - author
 
 > Project is not finished yet, however its not far from it.
