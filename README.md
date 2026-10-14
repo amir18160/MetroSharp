@@ -3,10 +3,7 @@
 [توضیحات فارسی، کلیک کنید](README.fa.md)
 
 
-> AI was used to polish this README file
-    - author
-
-> Project is not finished yet, however its not far from it.
+> Project is not finished yet due to personal issues. any poll request is welcomed.
 
 ### Backend, API, Automation & Telegram Infrastructure for Metro Moviez
 
